@@ -15,6 +15,7 @@ func TestSmartCopy(t *testing.T) {
 		B string
 		C string
 		D int64
+		E string
 	}
 
 	input := Input{
@@ -22,6 +23,7 @@ func TestSmartCopy(t *testing.T) {
 		B: "2.0",
 		C: "something",
 		D: 1609459260000,
+		E: "true",
 	}
 
 	type Output struct {
@@ -29,10 +31,11 @@ func TestSmartCopy(t *testing.T) {
 		B float32
 		C string
 		D time.Time
-		E int
+		E bool
+		F int
 	}
 
-	output := Output{64, 64, "yep", time.Time{}, 64}
+	output := Output{64, 64, "yep", time.Time{}, false, 64}
 
 	if err := commons.SmartCopy(&output, &input); err != nil {
 		t.Error(err)
@@ -54,7 +57,11 @@ func TestSmartCopy(t *testing.T) {
 		t.Errorf("have %s, want 2021-01-01T00:01:00Z", have)
 	}
 
-	if output.E != 64 {
-		t.Errorf("have %d, want 64", output.E)
+	if !output.E {
+		t.Errorf("have false, want true")
+	}
+
+	if output.F != 64 {
+		t.Errorf("have %d, want 64", output.F)
 	}
 }
