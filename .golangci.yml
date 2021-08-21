@@ -1,0 +1,9 @@
+linters:
+  enable-all: true
+  disable:
+    - golint
+    - interfacer
+    - scopelint
+    - maligned
+    - wrapcheck                 # TODO
+    - gomoddirectives           # TODO
