@@ -16,5 +16,5 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
-        args: --timeout=2m
+        args: --exclude 'VisibleFields not declared by package reflect' --timeout=2m 
         version: latest
