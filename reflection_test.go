@@ -2,6 +2,7 @@ package commons_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ydm/commons"
 )
@@ -13,22 +14,25 @@ func TestSmartCopy(t *testing.T) {
 		A string
 		B string
 		C string
+		D int64
 	}
 
 	input := Input{
 		A: "1.0",
 		B: "2.0",
 		C: "something",
+		D: 1609459260000,
 	}
 
 	type Output struct {
 		A float64
 		B float32
 		C string
-		D int
+		D time.Time
+		E int
 	}
 
-	output := Output{64, 64, "yep", 64}
+	output := Output{64, 64, "yep", time.Time{}, 64}
 
 	if err := commons.SmartCopy(&output, &input); err != nil {
 		t.Error(err)
@@ -46,7 +50,11 @@ func TestSmartCopy(t *testing.T) {
 		t.Errorf("have %s, want something", output.C)
 	}
 
-	if output.D != 64 {
-		t.Errorf("have %d, want 64", output.D)
+	if have := output.D.Format(time.RFC3339Nano); have != "2021-01-01T00:01:00Z" {
+		t.Errorf("have %s, want 2021-01-01T00:01:00Z", have)
+	}
+
+	if output.E != 64 {
+		t.Errorf("have %d, want 64", output.E)
 	}
 }
