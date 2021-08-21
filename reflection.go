@@ -5,50 +5,43 @@ import (
 	"strconv"
 )
 
-// ParseFields expects two pointers to structs.  It parses all string
-// fields from src and assigns them to dst.  Fields are matched by
-// name.  ParseFields returns the number of fields successfully read,
-// parsed and assigned.
-func ParseFields(dst, src interface{}) int {
+func SmartCopy(dst, src interface{}) error {
 	input := reflect.ValueOf(src).Elem()
-	inputFields := reflect.VisibleFields(input.Type())
-
 	output := reflect.ValueOf(dst).Elem()
 
-	match := func(field reflect.StructField) bool {
-		if field.Type.Kind() != reflect.String {
-			return false
+	hasField := func(name string) bool {
+		for _, field := range reflect.VisibleFields(input.Type()) {
+			if field.Name == name {
+				return true
+			}
 		}
 
-		outputField := output.FieldByName(field.Name)
-
-		if outputField.IsZero() {
-			return false
-		}
-
-		return outputField.Type().Kind() == reflect.Float64
+		return false
 	}
 
-	ans := 0
+	for _, inputStructField := range reflect.VisibleFields(input.Type()) {
+		if !hasField(inputStructField.Name) {
+			continue
+		}
 
-	for _, inputField := range inputFields {
-		if match(inputField) {
-			stringValue := input.FieldByName(inputField.Name).String()
+		outputField := output.FieldByName(inputStructField.Name)
+		inputField := input.FieldByIndex(inputStructField.Index)
+		inputKind := inputField.Kind()
 
-			floatValue, err := strconv.ParseFloat(stringValue, 64) //nolint:gomnd
-			if err != nil {
-				continue
+		if outputField.Kind() == inputKind {
+			outputField.Set(inputField)
+		} else if inputKind == reflect.String {
+			kind := outputField.Kind()
+			if kind == reflect.Float32 || kind == reflect.Float64 {
+				x, err := strconv.ParseFloat(inputField.String(), 64) //nolint:gomnd
+				if err != nil {
+					return err
+				}
+
+				outputField.SetFloat(x)
 			}
-
-			outputField := output.FieldByName(inputField.Name)
-			if outputField.IsZero() {
-				panic("DEBA")
-			}
-
-			outputField.SetFloat(floatValue)
-			ans++
 		}
 	}
 
-	return ans
+	return nil
 }

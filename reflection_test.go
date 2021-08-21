@@ -6,7 +6,7 @@ import (
 	"github.com/ydm/commons"
 )
 
-func TestCopyFloat64(t *testing.T) {
+func TestSmartCopy(t *testing.T) {
 	t.Parallel()
 
 	type Input struct {
@@ -15,23 +15,23 @@ func TestCopyFloat64(t *testing.T) {
 		C string
 	}
 
-	type Output struct {
-		A float64
-		B float64
-		C float64
-		D float64
-	}
-
 	input := Input{
 		A: "1.0",
 		B: "2.0",
-		C: "4.0",
+		C: "something",
 	}
 
-	output := Output{64, 64, 64, 64}
+	type Output struct {
+		A float64
+		B float32
+		C string
+		D int
+	}
 
-	if have := commons.ParseFields(&output, &input); have != 3 {
-		t.Errorf("have %d, want 3", have)
+	output := Output{64, 64, "yep", 64}
+
+	if err := commons.SmartCopy(&output, &input); err != nil {
+		t.Error(err)
 	}
 
 	if output.A != 1 {
@@ -42,11 +42,11 @@ func TestCopyFloat64(t *testing.T) {
 		t.Errorf("have %f, want 2", output.B)
 	}
 
-	if output.C != 4 {
-		t.Errorf("have %f, want 4", output.C)
+	if output.C != "something" {
+		t.Errorf("have %s, want something", output.C)
 	}
 
 	if output.D != 64 {
-		t.Errorf("have %f, want 64", output.D)
+		t.Errorf("have %d, want 64", output.D)
 	}
 }
