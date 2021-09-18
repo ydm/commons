@@ -41,6 +41,39 @@ func Msg2(e *zerolog.Event) {
 	e.Str("caller", Location3()).Msg(Location2())
 }
 
+// +--------------+
+// | FilterWriter |
+// +--------------+
+
+type FilterWriter struct {
+	Level  zerolog.Level
+	Writer io.Writer
+}
+
+func (w *FilterWriter) Write(p []byte) (n int, err error) {
+	n, err = w.Writer.Write(p)
+
+	if err != nil {
+		err = fmt.Errorf("FilterWriter.Write: %w", err)
+	}
+
+	return
+}
+
+func (w *FilterWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+	if level >= w.Level {
+		n, err = w.Writer.Write(p)
+
+		if err != nil {
+			err = fmt.Errorf("FilterWriter.WriteLevel: %w", err)
+		}
+
+		return
+	}
+
+	return len(p), nil
+}
+
 // +-----------------------+
 // | Logging configuration |
 // +-----------------------+
@@ -118,21 +151,30 @@ func SetupLogger(c LogConfiguration) error {
 	if c.ConsoleLoggingEnabled {
 		var console zerolog.ConsoleWriter
 		console.Out = os.Stderr
-		writers = append(writers, console)
-	}
 
-	if c.Filename != "" {
-		writers = append(writers, &lumberjack.Logger{
-			Filename:   path.Join(c.Directory, c.Filename),
-			MaxSize:    c.MaxSize,
-			MaxAge:     c.MaxAge,
-			MaxBackups: c.MaxBackups,
-			LocalTime:  false,
-			Compress:   false,
+		writers = append(writers, &FilterWriter{
+			Level:  zerolog.InfoLevel,
+			Writer: console,
 		})
 	}
 
-	multi := io.MultiWriter(writers...)
+	if c.Filename != "" {
+		w := &FilterWriter{
+			Level: zerolog.DebugLevel,
+			Writer: &lumberjack.Logger{
+				Filename:   path.Join(c.Directory, c.Filename),
+				MaxSize:    c.MaxSize,
+				MaxAge:     c.MaxAge,
+				MaxBackups: c.MaxBackups,
+				LocalTime:  false,
+				Compress:   false,
+			},
+		}
+
+		writers = append(writers, w)
+	}
+
+	multi := zerolog.MultiLevelWriter(writers...)
 
 	// Create logger with all settings taken into account.
 	log.Logger = zerolog.New(multi).With().Timestamp().Logger()
