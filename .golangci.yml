@@ -5,4 +5,3 @@ linters:
     - interfacer
     - scopelint
     - maligned
-    - gomoddirectives           # TODO

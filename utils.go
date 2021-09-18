@@ -43,10 +43,12 @@ func Location3() string {
 	return xs[len(xs)-1]
 }
 
+//nolint:gomnd
 func Round2(x float64) float64 {
 	return float64(int(x*100)) / 100.0
 }
 
+//nolint:gomnd
 func Round4(x float64) float64 {
 	return float64(int(x*10000)) / 10000.0
 }

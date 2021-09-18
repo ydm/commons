@@ -16,7 +16,6 @@ func AggTrade(ctx context.Context, symbol string, s FuturesStrategy) {
 			panic(err)
 		},
 	)
-
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +41,6 @@ func BookTicker(ctx context.Context, symbol string, s FuturesStrategy) {
 			panic(err)
 		},
 	)
-
 	if err != nil {
 		panic(err)
 	}
