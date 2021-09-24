@@ -1,8 +1,28 @@
 package commons
 
-import "github.com/adshao/go-binance/v2/futures"
+import (
+	"time"
+)
 
-type FuturesStrategy interface {
-	OnAggTrade(symbol string, event *futures.WsAggTradeEvent)
-	OnBookTicker(symbol string, event *futures.WsBookTickerEvent)
+type Trade struct {
+	Time      time.Time
+	Symbol    string
+	Price     string
+	Quantity  string
+	TradeTime time.Time
+}
+
+type BookTicker struct {
+	Time            time.Time
+	TransactionTime time.Time
+	Symbol          string
+	BestBidPrice    float64
+	BestBidQty      float64
+	BestAskPrice    float64
+	BestAskQty      float64
+}
+
+type Strategy interface {
+	OnAggTrade(symbol string, event Trade)
+	OnBookTicker(symbol string, event BookTicker)
 }

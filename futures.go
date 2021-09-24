@@ -4,13 +4,19 @@ import (
 	"context"
 
 	"github.com/adshao/go-binance/v2/futures"
+	"github.com/rs/zerolog/log"
 )
 
-func AggTrade(ctx context.Context, symbol string, s FuturesStrategy) {
+func SubscribeAggTrade(ctx context.Context, symbol string, s Strategy) {
 	done, stop, err := futures.WsAggTradeServe(
 		symbol,
 		func(event *futures.WsAggTradeEvent) {
-			s.OnAggTrade(symbol, event)
+			var x Trade
+			if err := SmartCopy(&x, event); err != nil {
+				What(log.Warn().Err(err), "SmartCopy(WsAggTradeEvent) failed")
+			}
+
+			s.OnAggTrade(symbol, x)
 		},
 		func(err error) {
 			panic(err)
@@ -31,11 +37,16 @@ func AggTrade(ctx context.Context, symbol string, s FuturesStrategy) {
 	}()
 }
 
-func BookTicker(ctx context.Context, symbol string, s FuturesStrategy) {
+func SubscribeBookTicker(ctx context.Context, symbol string, s Strategy) {
 	done, stop, err := futures.WsBookTickerServe(
 		symbol,
 		func(event *futures.WsBookTickerEvent) {
-			s.OnBookTicker(symbol, event)
+			var x BookTicker
+			if err := SmartCopy(&x, event); err != nil {
+				What(log.Warn().Err(err), "SmartCopy(WsBookTickerEvent) failed")
+			}
+
+			s.OnBookTicker(symbol, x)
 		},
 		func(err error) {
 			panic(err)
