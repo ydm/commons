@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var ErrNotBool = errors.New("not a boolean")
@@ -48,7 +47,9 @@ func copyField(inputFieldName string, inputField, outputField reflect.Value) err
 	case reflect.Int64:
 		// If input field is int64 and output is time.Time: convert time from
 		// milliseconds and assign.
-		if outputField.Type() == reflect.TypeOf(time.Time{}) {
+		//
+		// XXX: Is there a smarter way to do this check?
+		if outputField.Type().String() == "time.Time" {
 			x := TimeFromMs(inputField.Int())
 			outputField.Set(reflect.ValueOf(x))
 		}
@@ -82,6 +83,10 @@ func SmartCopy(dst, src interface{}) error {
 
 		inputField := input.FieldByIndex(inputStructField.Index)
 		outputField := output.FieldByName(inputStructField.Name)
+
+		if !outputField.IsValid() {
+			continue
+		}
 
 		if err := copyField(inputStructField.Name, inputField, outputField); err != nil {
 			return err

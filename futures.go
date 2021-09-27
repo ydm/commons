@@ -11,6 +11,12 @@ func SubscribeAggTrade(ctx context.Context, symbol string, s Strategy) {
 	done, stop, err := futures.WsAggTradeServe(
 		symbol,
 		func(event *futures.WsAggTradeEvent) {
+			if event == nil {
+				What(log.Warn(), "event is nil")
+
+				return
+			}
+
 			var x Trade
 			if err := SmartCopy(&x, event); err != nil {
 				What(log.Warn().Err(err), "SmartCopy(WsAggTradeEvent) failed")
