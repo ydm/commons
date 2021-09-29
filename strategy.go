@@ -7,8 +7,8 @@ import (
 type Trade struct {
 	Time      time.Time
 	Symbol    string
-	Price     string
-	Quantity  string
+	Price     float64
+	Quantity  float64
 	TradeTime time.Time
 }
 
