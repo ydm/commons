@@ -1,15 +1,16 @@
 top: test lint
 
-fix:
-	golangci-lint run --fix
-
 help:
 	@echo 'Management commands:'
 	@echo
 	@echo 'Usage:'
-	@echo '    make lint            Run linters.'
-	@echo '    make test            Run tests.'
+	@echo '    make fix            Fix trivial linting problems.'
+	@echo '    make lint           Run linters.'
+	@echo '    make test           Run tests.'
 	@echo
+
+fix:
+	golangci-lint run --fix
 
 lint:
 	golangci-lint run
@@ -17,4 +18,4 @@ lint:
 test:
 	go test ./...
 
-.PHONY: help lint test
+.PHONY: top help fix lint test
