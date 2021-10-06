@@ -81,7 +81,7 @@ func (w *FilterWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err err
 var ErrUnrecognizedLogLevel = errors.New("unrecognized log level")
 
 // https://gist.github.com/panta/2530672ca641d953ae452ecb5ef79d7d
-type LogConfiguration struct {
+type LogConfig struct {
 	Level string
 
 	// Enable console logging.
@@ -128,7 +128,7 @@ func parseLogLevel(level string) (zerolog.Level, error) {
 	return zerolog.Disabled, fmt.Errorf("%w: %s", ErrUnrecognizedLogLevel, level)
 }
 
-func SetupLogger(c LogConfiguration) error {
+func SetupLogger(c LogConfig) error {
 	logLevel, err := parseLogLevel(c.Level)
 	if err != nil {
 		return err
