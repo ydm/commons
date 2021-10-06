@@ -8,6 +8,9 @@ import (
 
 func GoInterrupt(ctx context.Context, cancel context.CancelFunc) {
 	go func() {
+		Checker.Push()
+		defer Checker.Pop()
+
 		if Interrupt(ctx) {
 			cancel()
 		}

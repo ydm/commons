@@ -13,18 +13,20 @@ import (
 
 // Checker is a simple tool to check if everything initialized is subsequently
 // deinitialized.  Works from simple open/close calls to gourintes.
-type resourceChecker struct {
+type ResourceChecker struct {
 	m         sync.Mutex
 	resources map[string]int
 }
 
-// nolint:gochecknoglobals
-var defaultResourceChecker = resourceChecker{
+// Checker is a default global instance of ResourceChecker.
+//
+//nolint:gochecknoglobals
+var Checker = ResourceChecker{
 	m:         sync.Mutex{},
 	resources: make(map[string]int),
 }
 
-func CheckerPush(xs ...string) {
+func (c *ResourceChecker) Push(xs ...string) {
 	var name string
 
 	switch len(xs) {
@@ -36,12 +38,12 @@ func CheckerPush(xs ...string) {
 		panic("invalid argument")
 	}
 
-	defaultResourceChecker.m.Lock()
-	defaultResourceChecker.resources[name]++
-	defaultResourceChecker.m.Unlock()
+	c.m.Lock()
+	c.resources[name]++
+	c.m.Unlock()
 }
 
-func CheckerPop(xs ...string) {
+func (c *ResourceChecker) Pop(xs ...string) {
 	var name string
 
 	switch len(xs) {
@@ -53,20 +55,20 @@ func CheckerPop(xs ...string) {
 		panic("invalid argument")
 	}
 
-	defaultResourceChecker.m.Lock()
-	defaultResourceChecker.resources[name]--
-	defaultResourceChecker.m.Unlock()
+	c.m.Lock()
+	c.resources[name]--
+	c.m.Unlock()
 }
 
 // CheckerAssert should be defer-called in main().
-func CheckerAssert() {
+func (c *ResourceChecker) Assert() {
 	What(log.Debug(), "checking resources...")
 	time.Sleep(1 * time.Second)
 
-	defaultResourceChecker.m.Lock()
-	defer defaultResourceChecker.m.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 
-	for k, v := range defaultResourceChecker.resources {
+	for k, v := range c.resources {
 		if v != 0 {
 			What(log.Warn().Int("counter", v).Str("unit", k), "leaked resource")
 		}

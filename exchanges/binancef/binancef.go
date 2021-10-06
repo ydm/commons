@@ -2,131 +2,85 @@ package binancef
 
 import (
 	"context"
-	"time"
 
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/rs/zerolog/log"
 	"github.com/ydm/commons"
 )
 
-type Trade struct {
-	Time      time.Time
-	Symbol    string
-	Price     float64
-	Quantity  float64
-	TradeTime time.Time
+type BinanceFutures struct {
+	Client *futures.Client
 }
 
-type BookTicker struct {
-	Time            time.Time
-	TransactionTime time.Time
-	Symbol          string
-	BestBidPrice    float64
-	BestBidQty      float64
-	BestAskPrice    float64
-	BestAskQty      float64
+func New(apikey, secret string) BinanceFutures {
+	client := futures.NewClient(apikey, secret)
+
+	return BinanceFutures{client}
 }
 
-// BookTicker(ctx context.Context, symbol string) chan commons.Book1
-// StreamTrades(ctx context.Context, symbol string) chan commons.Trade
-
-func SubscribeAggTrade(ctx context.Context, symbol string) chan commons.Trade {
-	c := make(chan commons.Trade)
-
-	done, stop, err := futures.WsAggTradeServe(
-		symbol,
-		func(event *futures.WsAggTradeEvent) {
-			if event == nil {
-				commons.What(log.Warn(), "event is nil")
-
-				return
-			}
-
-			var x Trade
-			if err := commons.SmartCopy(&x, event); err != nil {
-				commons.What(log.Warn().Err(err), "SmartCopy(WsAggTradeEvent) failed")
-			}
-
-			c <- commons.Trade{
-				Time:     x.Time,
-				Symbol:   x.Symbol,
-				Price:    x.Price,
-				Quantity: x.Quantity,
-			}
-		},
-		func(err error) {
-			panic(err)
-		},
+// CreateOrder accepts arguments of the following formats:
+//
+// - side: buy or sell
+// - orderType: market
+func (b *BinanceFutures) CreateOrder(
+	symbol string,
+	side string,
+	orderType string,
+	quantityStr string,
+	reduceOnly bool,
+) (commons.CreateOrderResponse, error) {
+	futuresSide := futures.SideType(
+		switchSideString(
+			side,
+			string(futures.SideTypeBuy),
+			string(futures.SideTypeSell),
+		),
 	)
+	futuresOrderType := futures.OrderType(
+		switchTypeString(orderType, string(futures.OrderTypeMarket)),
+	)
+
+	service := b.Client.NewCreateOrderService().
+		Symbol(symbol).
+		Side(futuresSide).
+		PositionSide(futures.PositionSideTypeBoth).
+		Type(futuresOrderType).
+		// TimeInForce(futures.TimeInForceTypeFOK).
+		Quantity(quantityStr).
+		ReduceOnly(reduceOnly).
+		// Price
+		// ClientOrderID
+		// StopPrice
+		// WorkingType
+		WorkingType(futures.WorkingTypeContractPrice).
+		// ActivationPrice
+		// CallbackRate (TODO)
+		PriceProtect(true).
+		NewOrderResponseType(futures.NewOrderRespTypeRESULT)
+		// ClosePosition(false)
+
+	res, err := service.Do(context.Background())
 	if err != nil {
-		panic(err)
+		commons.Msg(
+			log.Fatal().
+				Err(err).
+				Str("symbol", symbol).
+				Str("side", side).
+				Str("quantity", quantityStr).
+				Bool("reduceOnly", reduceOnly),
+		)
 	}
 
-	go func() {
-		commons.CheckerPush()
-		defer commons.CheckerPop()
-
-		<-done
-		close(c)
-	}()
-
-	go func() {
-		commons.CheckerPush()
-		defer commons.CheckerPop()
-
-		<-ctx.Done()
-		close(stop)
-
-		<-done
-	}()
-
-	return c
+	return commons.CreateOrderResponse{
+		ExecutedQuantity: res.ExecutedQuantity,
+		AvgPrice:         res.AvgPrice,
+	}, nil
 }
 
-func SubscribeBookTicker(ctx context.Context, symbol string) chan commons.Book1 {
-	c := make(chan commons.Book1)
+func (b *BinanceFutures) Book1(ctx context.Context, symbol string) chan commons.Book1 {
+	return SubscribeBookTicker(ctx, symbol)
+}
 
-	done, stop, err := futures.WsBookTickerServe(
-		symbol,
-		func(event *futures.WsBookTickerEvent) {
-			var x BookTicker
-			if err := commons.SmartCopy(&x, event); err != nil {
-				commons.What(log.Warn().Err(err), "SmartCopy(WsBookTickerEvent) failed")
-			}
-
-			c <- commons.Book1{
-				Time:        x.Time,
-				Symbol:      x.Symbol,
-				BidPrice:    x.BestBidPrice,
-				BidQuantity: x.BestBidQty,
-				AskPrice:    x.BestAskPrice,
-				AskQuantity: x.BestAskQty,
-			}
-		},
-		func(err error) {
-			panic(err)
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	go func() {
-		commons.CheckerPush()
-		defer commons.CheckerPop()
-
-		<-done
-		close(c)
-	}()
-
-	go func() {
-		commons.CheckerPush()
-		defer commons.CheckerPop()
-
-		<-ctx.Done()
-		close(stop)
-		<-done
-	}()
-
-	return c
+func (b *BinanceFutures) Trade(ctx context.Context, symbol string) chan commons.Trade {
+	return SubscribeAggTrade(ctx, symbol)
 }
