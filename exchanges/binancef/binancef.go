@@ -3,6 +3,7 @@ package binancef
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/rs/zerolog/log"
@@ -96,7 +97,8 @@ func (b *BinanceFutures) ChangeMarginType(symbol, marginType string) error {
 		return nil
 	}
 
-	return err
+	return fmt.Errorf("ChangeMarginType: symbol=%s, marginType=%s, err=%w",
+		symbol, marginType, err)
 }
 
 func (b *BinanceFutures) ChangeLeverage(symbol string, leverage int) error {
@@ -104,9 +106,9 @@ func (b *BinanceFutures) ChangeLeverage(symbol string, leverage int) error {
 		Symbol(symbol).
 		Leverage(leverage).
 		Do(context.Background())
-
 	if err != nil {
-		return err
+		return fmt.Errorf("ChangeLeverage: symbol=%s, leverage=%d, err=%w",
+			symbol, leverage, err)
 	}
 
 	if resp.Leverage != leverage {
