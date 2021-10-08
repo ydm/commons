@@ -1,7 +1,8 @@
 linters:
   enable-all: true
   disable:
-    - golint
-    - interfacer
-    - scopelint
-    - maligned
+    - golint                    # Deprecated.
+    - interfacer                # Deprecated.
+    - scopelint                 # Deprecated.
+    - maligned                  # Deprecated.
+    - gomnd                     # Fucking annoying.

@@ -18,7 +18,7 @@ func switchSideString(side string, buy, sell string) string {
 	case "sell":
 		return sell
 	default:
-		panic("invalid side")
+		panic(side)
 	}
 }
 
@@ -26,5 +26,17 @@ func switchTypeString(orderType string, market string) string {
 	if orderType == "market" {
 		return market
 	}
-	panic("")
+
+	panic(orderType)
+}
+
+func switchMarginTypeString(marginType, crossed, isolated string) string {
+	switch marginType {
+	case "crossed":
+		return crossed
+	case "isolated":
+		return isolated
+	default:
+		panic(marginType)
+	}
 }

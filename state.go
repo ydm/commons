@@ -11,6 +11,8 @@ import (
 
 // Ticker holds all the relevant data for a single trading pair.
 type Ticker struct {
+	Symbol string
+
 	// Trade data.
 	TradePrice    float64
 	TradeQuantity float64
@@ -23,6 +25,10 @@ type Ticker struct {
 }
 
 func (s *Ticker) ApplyTrade(x Trade) Ticker {
+	if s.Symbol != x.Symbol {
+		panic(x.Symbol)
+	}
+
 	s.TradePrice = x.Price
 	s.TradeQuantity = x.Quantity
 
@@ -30,6 +36,10 @@ func (s *Ticker) ApplyTrade(x Trade) Ticker {
 }
 
 func (s *Ticker) ApplyBook1(x Book1) Ticker {
+	if s.Symbol != x.Symbol {
+		panic(x.Symbol)
+	}
+
 	s.AskPrice = x.AskPrice
 	s.AskQuantity = x.AskQuantity
 	s.BidPrice = x.BidPrice
@@ -47,12 +57,16 @@ type State struct {
 	Symbols map[string]*Ticker
 }
 
-func (s State) ApplyTrade(symbol string, x Trade) Ticker {
-	return s.Symbols[symbol].ApplyTrade(x)
+func (s *State) ApplyTrade(x Trade) Ticker {
+	s.Now = x.Time
+
+	return s.Symbols[x.Symbol].ApplyTrade(x)
 }
 
-func (s State) ApplyBook1(symbol string, x Book1) Ticker {
-	return s.Symbols[symbol].ApplyBook1(x)
+func (s *State) ApplyBook1(x Book1) Ticker {
+	s.Now = x.Time
+
+	return s.Symbols[x.Symbol].ApplyBook1(x)
 }
 
 // +-------------+
@@ -62,14 +76,20 @@ func (s State) ApplyBook1(symbol string, x Book1) Ticker {
 type StateKeeper struct {
 	Channel chan Ticker
 	state   State
+	locks   map[string]*sync.Mutex
 }
 
-func NewStateKeeper(numChannels int) (k StateKeeper) {
-	// We yield a new State through this channel after each update.
-	channel := make(chan Ticker)
+func NewStateKeeper(numChannels int, symbols ...string) (k StateKeeper) {
+	// We yield a new State through this channel after each
+	// update.
+	channel := make(chan Ticker, 16)
 
-	// We need to know in advance how many input channels this keeper will consume.
+	// We need to know in advance how many input channels this
+	//  keeper will consume.  Kind of stupid, but it is what it
+	//  is.  When all of these input channels get closed, we close
+	//  our channel too.
 	var wg sync.WaitGroup
+
 	wg.Add(numChannels)
 
 	go func() {
@@ -80,9 +100,34 @@ func NewStateKeeper(numChannels int) (k StateKeeper) {
 		close(channel)
 	}()
 
+	// Initialize the state kept.  We need to know in advance how
+	// many symbols we'll be managing the state for.
+	state := State{
+		Now:     time.Time{},
+		Symbols: make(map[string]*Ticker),
+	}
+
+	// Each symbol has an associated lock (used for state updates)
+	// and a ticker (where state is kept).
+	locks := make(map[string]*sync.Mutex)
+
+	for _, s := range symbols {
+		state.Symbols[s] = &Ticker{
+			Symbol:        s,
+			TradePrice:    0,
+			TradeQuantity: 0,
+			BidPrice:      0,
+			BidQuantity:   0,
+			AskPrice:      0,
+			AskQuantity:   0,
+		}
+		locks[s] = &sync.Mutex{}
+	}
+
 	return StateKeeper{
 		Channel: channel,
-		states:  sync.Map{},
+		state:   state,
+		locks:   locks,
 	}
 }
 
@@ -92,13 +137,11 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 		defer Checker.Pop()
 
 		for x := range xs {
-
-			k.m.Lock()
-			k.s.ApplyTrade(x)
-			state := k.s
-			k.m.Unlock()
-
-			k.C <- state
+			m := k.locks[x.Symbol]
+			m.Lock()
+			ticker := k.state.ApplyTrade(x)
+			m.Unlock()
+			k.Channel <- ticker
 		}
 	}()
 }
@@ -109,12 +152,11 @@ func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
 		defer Checker.Pop()
 
 		for x := range xs {
-			k.m.Lock()
-			k.s.ApplyBook1(x)
-			state := k.s
-			k.m.Unlock()
-
-			k.C <- state
+			m := k.locks[x.Symbol]
+			m.Lock()
+			ticker := k.state.ApplyBook1(x)
+			m.Unlock()
+			k.Channel <- ticker
 		}
 	}()
 }

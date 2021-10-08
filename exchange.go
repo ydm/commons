@@ -29,7 +29,18 @@ type CreateOrderResponse struct {
 
 type Exchange interface {
 	// API calls.
+
+	// CreateOrder accepts arguments of the following formats:
+	//
+	// - side: buy or sell,
+	// - orderType: market (just that for now).
 	CreateOrder(symbol, side, orderType, quantityStr string, reduceOnly bool) (CreateOrderResponse, error)
+
+	// ChangeMarginType should be invoked with marginType set to
+	// "crossed" or "isolated".
+	ChangeMarginType(symbol, marginType string) error
+
+	ChangeLeverage(symbol string, leverage int) error
 
 	// Streams.
 	Book1(ctx context.Context, symbol string) chan Book1
