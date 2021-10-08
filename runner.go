@@ -6,7 +6,14 @@ func Run(keeper *StateKeeper, algo Algo) {
 		defer Checker.Pop()
 
 		for ticker := range keeper.Channel {
-			algo.Run(ticker)
+			algo.Run(
+				AlgoContext{
+					Result: true,
+					Bools:  make(map[string]bool),
+					Floats: make(map[string]float64),
+				},
+				ticker,
+			)
 		}
 	}()
 }
