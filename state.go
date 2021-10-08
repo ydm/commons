@@ -5,14 +5,12 @@ import (
 	"time"
 )
 
-// +-------+
-// | State |
-// +-------+
+// +--------+
+// | Ticker |
+// +--------+
 
-type State struct {
-	Symbol string
-	Now    time.Time
-
+// Ticker holds all the relevant data for a single trading pair.
+type Ticker struct {
 	// Trade data.
 	TradePrice    float64
 	TradeQuantity float64
@@ -24,26 +22,37 @@ type State struct {
 	AskQuantity float64
 }
 
-func (s *State) ApplyTrade(x Trade) {
-	if s.Symbol != x.Symbol {
-		panic("")
-	}
-
-	s.Now = x.Time
+func (s *Ticker) ApplyTrade(x Trade) Ticker {
 	s.TradePrice = x.Price
 	s.TradeQuantity = x.Quantity
+
+	return *s
 }
 
-func (s *State) ApplyBook1(x Book1) {
-	if s.Symbol != x.Symbol {
-		panic("")
-	}
-
-	s.Now = x.Time
+func (s *Ticker) ApplyBook1(x Book1) Ticker {
 	s.AskPrice = x.AskPrice
 	s.AskQuantity = x.AskQuantity
 	s.BidPrice = x.BidPrice
 	s.BidQuantity = x.BidQuantity
+
+	return *s
+}
+
+// +-------+
+// | State |
+// +-------+
+
+type State struct {
+	Now     time.Time
+	Symbols map[string]*Ticker
+}
+
+func (s State) ApplyTrade(symbol string, x Trade) Ticker {
+	return s.Symbols[symbol].ApplyTrade(x)
+}
+
+func (s State) ApplyBook1(symbol string, x Book1) Ticker {
+	return s.Symbols[symbol].ApplyBook1(x)
 }
 
 // +-------------+
@@ -51,25 +60,29 @@ func (s *State) ApplyBook1(x Book1) {
 // +-------------+
 
 type StateKeeper struct {
-	C chan State
-	s State
-	m sync.Mutex
+	Channel chan Ticker
+	state   State
 }
 
-func NewStateKeeper() (k StateKeeper) {
+func NewStateKeeper(numChannels int) (k StateKeeper) {
+	// We yield a new State through this channel after each update.
+	channel := make(chan Ticker)
+
+	// We need to know in advance how many input channels this keeper will consume.
+	var wg sync.WaitGroup
+	wg.Add(numChannels)
+
+	go func() {
+		Checker.Push()
+		defer Checker.Pop()
+
+		wg.Wait()
+		close(channel)
+	}()
+
 	return StateKeeper{
-		C: make(chan State),
-		s: State{
-			Symbol:        "",
-			Now:           time.Time{},
-			TradePrice:    0,
-			TradeQuantity: 0,
-			BidPrice:      0,
-			BidQuantity:   0,
-			AskPrice:      0,
-			AskQuantity:   0,
-		},
-		m: sync.Mutex{},
+		Channel: channel,
+		states:  sync.Map{},
 	}
 }
 
@@ -79,6 +92,7 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 		defer Checker.Pop()
 
 		for x := range xs {
+
 			k.m.Lock()
 			k.s.ApplyTrade(x)
 			state := k.s
