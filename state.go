@@ -57,19 +57,19 @@ func (s *Ticker) ApplyBook1(x Book1) Ticker {
 
 type State struct {
 	Now     time.Time
-	Symbols map[string]*Ticker
+	Tickers map[string]*Ticker
 }
 
 func (s *State) ApplyTrade(x Trade) Ticker {
 	s.Now = x.Time
 
-	return s.Symbols[x.Symbol].ApplyTrade(x)
+	return s.Tickers[x.Symbol].ApplyTrade(x)
 }
 
 func (s *State) ApplyBook1(x Book1) Ticker {
 	s.Now = x.Time
 
-	return s.Symbols[x.Symbol].ApplyBook1(x)
+	return s.Tickers[x.Symbol].ApplyBook1(x)
 }
 
 // +-------------+
@@ -91,7 +91,7 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 
 		state: State{
 			Now:     time.Time{},
-			Symbols: make(map[string]*Ticker),
+			Tickers: make(map[string]*Ticker),
 		},
 		locks: make(map[string]*sync.Mutex),
 		wg:    sync.WaitGroup{},
@@ -116,7 +116,7 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	// symbol has an associated lock (used for state updates) and
 	// a ticker (where state is kept).
 	for _, s := range symbols {
-		k.state.Symbols[s] = &Ticker{
+		k.state.Tickers[s] = &Ticker{
 			Symbol:        s,
 			Now:           time.Time{},
 			TradePrice:    0,
@@ -136,6 +136,7 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
+
 		defer k.wg.Done()
 
 		for x := range xs {
@@ -152,6 +153,7 @@ func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
+
 		defer k.wg.Done()
 
 		for x := range xs {
