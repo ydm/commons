@@ -136,6 +136,7 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
+		defer k.wg.Done()
 
 		for x := range xs {
 			m := k.locks[x.Symbol]
@@ -144,8 +145,6 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 			m.Unlock()
 			k.Channel <- ticker
 		}
-
-		k.wg.Done()
 	}()
 }
 
@@ -153,6 +152,7 @@ func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
+		defer k.wg.Done()
 
 		for x := range xs {
 			m := k.locks[x.Symbol]
@@ -161,7 +161,5 @@ func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
 			m.Unlock()
 			k.Channel <- ticker
 		}
-
-		k.wg.Done()
 	}()
 }

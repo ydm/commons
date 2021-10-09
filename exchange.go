@@ -28,7 +28,7 @@ type CreateOrderResponse struct {
 }
 
 type Exchange interface {
-	// API calls.
+	// [1] API calls.
 
 	// CreateOrder accepts arguments of the following formats:
 	//
@@ -42,7 +42,7 @@ type Exchange interface {
 
 	ChangeLeverage(symbol string, leverage int) error
 
-	// Streams.
+	// [2] Streams.
 	Book1(ctx context.Context, symbol string) chan Book1
 	Trade(ctx context.Context, symbol string) chan Trade
 }

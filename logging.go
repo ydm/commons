@@ -153,7 +153,7 @@ func SetupLogger(c LogConfig) error {
 		console.Out = os.Stderr
 
 		writers = append(writers, &FilterWriter{
-			Level:  zerolog.InfoLevel,
+			Level:  logLevel, // Or zerolog.InfoLevel?
 			Writer: console,
 		})
 	}
