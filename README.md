@@ -1,2 +1,3 @@
 # commons
-Utilities and reusable components
+
+Utilities and reusable components for cryptocurrency trading bots.
