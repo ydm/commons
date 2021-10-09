@@ -79,10 +79,10 @@ func (s *State) ApplyBook1(x Book1) Ticker {
 type StateKeeper struct {
 	// We yield a new State through this channel after each
 	// update.
-	Channel chan Ticker
-	state   State
-	locks   map[string]*sync.Mutex
-	wg      sync.WaitGroup
+	Channel   chan Ticker
+	state     State
+	locks     map[string]*sync.Mutex
+	waitGroup sync.WaitGroup
 }
 
 func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
@@ -93,21 +93,21 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 			Now:     time.Time{},
 			Tickers: make(map[string]*Ticker),
 		},
-		locks: make(map[string]*sync.Mutex),
-		wg:    sync.WaitGroup{},
+		locks:     make(map[string]*sync.Mutex),
+		waitGroup: sync.WaitGroup{},
 	}
 
 	// We need to know in advance how many input channels this
 	// keeper will consume.  Kind of stupid, but it is what it is.
 	// When all of these input channels get closed, we close our
 	// channel too.
-	k.wg.Add(numChannels)
+	k.waitGroup.Add(numChannels)
 
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
 
-		k.wg.Wait()
+		k.waitGroup.Wait()
 		close(k.Channel)
 	}()
 
@@ -137,7 +137,7 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 		Checker.Push()
 		defer Checker.Pop()
 
-		defer k.wg.Done()
+		defer k.waitGroup.Done()
 
 		for x := range xs {
 			m := k.locks[x.Symbol]
@@ -154,7 +154,7 @@ func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
 		Checker.Push()
 		defer Checker.Pop()
 
-		defer k.wg.Done()
+		defer k.waitGroup.Done()
 
 		for x := range xs {
 			m := k.locks[x.Symbol]
