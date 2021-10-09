@@ -11,6 +11,7 @@ import (
 
 // Ticker holds all the relevant data for a single trading pair.
 type Ticker struct {
+	Now    time.Time
 	Symbol string
 
 	// Trade data.
@@ -29,6 +30,7 @@ func (s *Ticker) ApplyTrade(x Trade) Ticker {
 		panic(x.Symbol)
 	}
 
+	s.Now = x.Time
 	s.TradePrice = x.Price
 	s.TradeQuantity = x.Quantity
 
@@ -40,6 +42,7 @@ func (s *Ticker) ApplyBook1(x Book1) Ticker {
 		panic(x.Symbol)
 	}
 
+	s.Now = x.Time
 	s.AskPrice = x.AskPrice
 	s.AskQuantity = x.AskQuantity
 	s.BidPrice = x.BidPrice
@@ -114,6 +117,7 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	// a ticker (where state is kept).
 	for _, s := range symbols {
 		k.state.Symbols[s] = &Ticker{
+			Now:           time.Time{},
 			Symbol:        s,
 			TradePrice:    0,
 			TradeQuantity: 0,

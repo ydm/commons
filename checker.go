@@ -68,9 +68,17 @@ func (c *ResourceChecker) Assert() {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	leak := false
+
 	for k, v := range c.resources {
 		if v != 0 {
+			leak = true
+
 			What(log.Warn().Int("counter", v).Str("unit", k), "leaked resource")
 		}
+	}
+
+	if !leak {
+		What(log.Info(), "no leaked resources detected")
 	}
 }
