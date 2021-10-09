@@ -117,8 +117,8 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	// a ticker (where state is kept).
 	for _, s := range symbols {
 		k.state.Symbols[s] = &Ticker{
-			Now:           time.Time{},
 			Symbol:        s,
+			Now:           time.Time{},
 			TradePrice:    0,
 			TradeQuantity: 0,
 			BidPrice:      0,
