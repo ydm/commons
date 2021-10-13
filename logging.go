@@ -18,26 +18,14 @@ import (
 // +-------------------+
 
 func Code(e *zerolog.Event, code string) {
-	if code != "" {
-		e = e.Str("code", code)
-	}
-
-	e.Msg(Location2())
+	e.Str("code", code).Str("caller", Location3()).Msg(Location2())
 }
 
 func What(e *zerolog.Event, what string) {
-	if what != "" {
-		e = e.Str("what", what)
-	}
-
-	e.Msg(Location2())
+	e.Str("what", what).Str("caller", Location3()).Msg(Location2())
 }
 
 func Msg(e *zerolog.Event) {
-	e.Msg(Location2())
-}
-
-func Msg2(e *zerolog.Event) {
 	e.Str("caller", Location3()).Msg(Location2())
 }
 
