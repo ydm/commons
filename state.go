@@ -97,10 +97,9 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 		waitGroup: sync.WaitGroup{},
 	}
 
-	// We need to know in advance how many input channels this
-	// keeper will consume.  Kind of stupid, but it is what it is.
-	// When all of these input channels get closed, we close our
-	// channel too.
+	// We need to know in advance how many input channels this keeper will consume.
+	// Kind of stupid, but it is what it is.  When all of these input channels get
+	// closed, we close StateKeeper.Channel too.
 	k.waitGroup.Add(numChannels)
 
 	go func() {
@@ -111,10 +110,9 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 		close(k.Channel)
 	}()
 
-	// Initialize the state kept.  We need to know in advance how
-	// many symbols we'll be managing a state for.  Also, each
-	// symbol has an associated lock (used for state updates) and
-	// a ticker (where state is kept).
+	// Initialize the state kept.  We need to know in advance how many symbols we'll
+	// be managing.  Also, each symbol has an associated lock (used for state updates)
+	// and a Ticker (where individual symbol states are kept).
 	for _, s := range symbols {
 		k.state.Tickers[s] = &Ticker{
 			Symbol:        s,

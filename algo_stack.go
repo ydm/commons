@@ -1,9 +1,5 @@
 package commons
 
-// +-------------+
-// | SingleStack |
-// +-------------+
-
 type SingleStack struct {
 	algos []Algo
 	stack []AlgoContainer

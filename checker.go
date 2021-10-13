@@ -7,12 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// +---------+
-// | Checker |
-// +---------+
-
-// Checker is a simple tool to check if everything initialized is subsequently
-// deinitialized.  Works from simple open/close calls to gourintes.
+// Checker is a simple tool that check if an object created/initialized is subsequently
+// deleted/deinitialized.  Can be used for goroutines, channels, etc.
 type ResourceChecker struct {
 	m         sync.Mutex
 	resources map[string]int
