@@ -13,6 +13,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect

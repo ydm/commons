@@ -2,10 +2,13 @@ package ftx
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/go-numb/go-ftx/auth"
+	"github.com/go-numb/go-ftx/realtime"
 	"github.com/go-numb/go-ftx/rest"
+	"github.com/go-numb/go-ftx/rest/private/account"
 	"github.com/go-numb/go-ftx/rest/private/orders"
 	"github.com/go-numb/go-ftx/types"
 	"github.com/ydm/commons"
@@ -57,13 +60,49 @@ func (f *FTX) ChangeMarginType(symbol, marginType string) error {
 }
 
 func (f *FTX) ChangeLeverage(symbol string, leverage int) error {
-	return nil
+	_, err := f.restClient.Leverage(&account.RequestForLeverage{
+		Leverage: leverage,
+	})
+
+	return fmt.Errorf("ChangeLeverage failed: %w", err)
 }
 
 func (f *FTX) Book1(ctx context.Context, symbol string) chan commons.Book1 {
-	return nil
+	inp := make(chan realtime.Response)
+	out := make(chan commons.Book1)
+
+	go func() {
+		commons.Checker.Push()
+		defer commons.Checker.Push()
+
+		err := realtime.Connect(ctx, inp, []string{"ticker"}, []string{symbol}, nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		commons.Checker.Push()
+		defer commons.Checker.Push()
+		defer close(out)
+
+		for resp := range inp {
+			if resp.Type == realtime.TICKER {
+				out <- commons.Book1{
+					Time:        resp.Ticker.Time.Time,
+					Symbol:      symbol,
+					BidPrice:    resp.Ticker.Bid,
+					BidQuantity: resp.Ticker.BidSize,
+					AskPrice:    resp.Ticker.Ask,
+					AskQuantity: resp.Ticker.AskSize,
+				}
+			}
+		}
+	}()
+
+	return out
 }
 
 func (f *FTX) Trade(ctx context.Context, symbol string) chan commons.Trade {
-	return nil
+	panic("not implemented")
 }
