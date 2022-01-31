@@ -15,6 +15,7 @@ type Trade struct {
 	Price     float64
 	Quantity  float64
 	TradeTime time.Time
+	Maker     bool // Whether buyer is maker.
 }
 
 type BookTicker struct {

@@ -41,7 +41,11 @@ func (b *BinanceFutures) CreateOrder(
 		),
 	)
 	futuresOrderType := futures.OrderType(
-		switchTypeString(orderType, string(futures.OrderTypeMarket)),
+		switchTypeString(
+			orderType,
+			string(futures.OrderTypeMarket),
+			string(futures.OrderTypeLimit),
+		),
 	)
 
 	service := b.client.NewCreateOrderService().

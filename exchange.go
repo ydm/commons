@@ -10,6 +10,10 @@ type Trade struct {
 	Symbol   string
 	Price    float64
 	Quantity float64
+
+	// Indicates whether the buyer is also the maker. Make sure
+	// given exchange supports that before using it.
+	BuyerIsMaker bool
 }
 
 // Book1 is the level one order book data.

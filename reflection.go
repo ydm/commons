@@ -44,6 +44,8 @@ func copyField(inputFieldName string, inputField, outputField reflect.Value) err
 	switch inputKind {
 	case outputKind:
 		outputField.Set(inputField)
+	case reflect.Bool:
+		outputField.SetBool(inputField.Bool())
 	case reflect.Int64:
 		// If input field is int64 and output is time.Time: convert time from
 		// milliseconds and assign.
