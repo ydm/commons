@@ -51,17 +51,21 @@ func (a *CircularArray) Len() int {
 }
 
 func (a *CircularArray) At(index int) interface{} {
+	if index < 0 {
+		index = a.Len() + index
+	}
+
 	mapped := a.Index(index)
 
 	return a.xs[mapped]
 }
 
-func (a *CircularArray) Rev(index int) interface{} {
-	n := a.Len()
-	i := n - 1 - index
+// func (a *CircularArray) Rev(index int) interface{} {
+// 	n := a.Len()
+// 	i := n - 1 - index
 
-	return a.At(i)
-}
+// 	return a.At(i)
+// }
 
 func (a *CircularArray) Last() interface{} {
 	return a.At(a.Len() - 1)

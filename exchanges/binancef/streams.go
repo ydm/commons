@@ -46,10 +46,11 @@ func SubscribeAggTrade(ctx context.Context, symbol string) chan commons.Trade {
 			}
 
 			c <- commons.Trade{
-				Time:     x.Time,
-				Symbol:   x.Symbol,
-				Price:    x.Price,
-				Quantity: x.Quantity,
+				Time:         x.Time,
+				Symbol:       x.Symbol,
+				Price:        x.Price,
+				Quantity:     x.Quantity,
+				BuyerIsMaker: x.Maker,
 			}
 		},
 		func(err error) {

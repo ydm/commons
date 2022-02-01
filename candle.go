@@ -55,13 +55,20 @@ func (b *CandleBuilder) Push(t Ticker) {
 	if b.NumberOfTrades == 0 {
 		b.Open = t.TradePrice
 	}
-	b.High.Push(t.TradePrice)
-	b.Low.Push(t.TradePrice)
+
+	if err := b.High.Push(t.TradePrice); err != nil {
+		panic(err)
+	}
+
+	if err := b.Low.Push(t.TradePrice); err != nil {
+		panic(err)
+	}
+
 	b.Close = t.TradePrice
 	b.Volume += t.TradeQuantity
 	quoteAssetVolume := t.TradePrice * t.TradeQuantity
 	b.QuoteAssetVolume += quoteAssetVolume
-	b.NumberOfTrades += 1
+	b.NumberOfTrades++
 
 	if !t.BuyerIsMaker {
 		b.TakerBuyBaseAssetVolume += t.TradeQuantity
@@ -89,8 +96,8 @@ func (b *CandleBuilder) Clear() Candle {
 		VWAP:                     b.QuoteAssetVolume / b.Volume,
 		QuoteAssetVolume:         b.QuoteAssetVolume,
 		NumberOfTrades:           b.NumberOfTrades,
-		TakerBuyBaseAssetVolume:  0,
-		TakerBuyQuoteAssetVolume: 0,
+		TakerBuyBaseAssetVolume:  b.TakerBuyBaseAssetVolume,
+		TakerBuyQuoteAssetVolume: b.TakerBuyQuoteAssetVolume,
 	}
 
 	b.Open = 0
@@ -101,7 +108,41 @@ func (b *CandleBuilder) Clear() Candle {
 	b.QuoteAssetVolume = 0
 	b.NumberOfTrades = 0
 	b.TakerBuyBaseAssetVolume = 0
-	b.TakerBuyQuoteAssetVolume = 00
+	b.TakerBuyQuoteAssetVolume = 0
 
 	return candle
+}
+
+// +-----------+
+// | Utilities |
+// +-----------+
+
+type Extractor func(c Candle) float64
+
+func MapCandles(f Extractor, a *CircularArray, m int) []float64 {
+	n := a.Len()
+	ans := make([]float64, m)
+
+	for i := n - m; i < n; i++ {
+		candle, ok := a.At(i).(Candle)
+		if !ok {
+			panic("not a candle")
+		}
+
+		ans[i-n+m] = f(candle)
+	}
+
+	return ans
+}
+
+func Closes(a *CircularArray, m int) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.Close
+	}, a, m)
+}
+
+func VWAPs(a *CircularArray, m int) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.VWAP
+	}, a, m)
 }

@@ -1,36 +1,78 @@
 package commons
 
-import "sync"
+// Pass a copy to make sure it's not changed.  MB this isn't smart.
+// As long it's not a bottleneck, I don't give a fuck.  Plus, I
+// wouldn't be surprised if the runtime actually optimizes this.
+type Predicate func(*CandleBuilder) bool
 
-type TickCandlesAlgo struct {
-	Candles  CircularArray
-	NumTicks int
-	builder  CandleBuilder
-	i        int
-	mutex    sync.Mutex
+type CandlesAlgo struct {
+	Candles   CircularArray
+	builder   CandleBuilder
+	predicate Predicate
 }
 
-func NewTickCandlesAlgo(numTicks int) *TickCandlesAlgo {
-	return &TickCandlesAlgo{
-		Candles:  NewCircularArray(256),
-		NumTicks: numTicks,
-		builder:  NewCandleBuilder(),
-		i:        0,
-		mutex:    sync.Mutex{},
+func NewCandlesAlgo(predicate Predicate) *CandlesAlgo {
+	return &CandlesAlgo{
+		Candles:   NewCircularArray(256),
+		builder:   NewCandleBuilder(),
+		predicate: predicate,
 	}
 }
 
-func (a *TickCandlesAlgo) Run(ctx AlgoContext, ticker Ticker) AlgoContext {
+func (a *CandlesAlgo) Run(ctx AlgoContext, ticker Ticker) AlgoContext {
 	if ticker.Last == TradeUpdate {
 		a.builder.Push(ticker)
-		if a.builder.NumberOfTrades >= a.NumTicks {
+
+		// Indicates whether we should produce a new candle
+		// and clear the builder.
+		clear := a.predicate(&a.builder)
+
+		// Produce and publish candle.
+		if clear {
 			candle := a.builder.Clear()
 			a.Candles.Push(candle)
-			ctx.Result = true
-		} else {
-			ctx.Result = false
+
+			ans := ctx.Copy()
+			ans.Objects["candles"] = &a.Candles
+			return ans
 		}
 	}
 
-	return ctx
+	return False
+}
+
+// +--------------+
+// | Tick candles |
+// +--------------+
+
+func NewTickCandlesAlgo(numTicks int) *CandlesAlgo {
+	predicate := func(b *CandleBuilder) bool {
+		return b.NumberOfTrades >= numTicks
+	}
+
+	return NewCandlesAlgo(predicate)
+}
+
+// +----------------+
+// | Volume candles |
+// +----------------+
+
+func NewVolumeCandlesAlgo(volumeThreshold float64) *CandlesAlgo {
+	predicate := func(b *CandleBuilder) bool {
+		return b.Volume >= volumeThreshold
+	}
+
+	return NewCandlesAlgo(predicate)
+}
+
+// +-----------+
+// | $ candles |
+// +-----------+
+
+func NewDollarCandlesAlgo(threshold float64) *CandlesAlgo {
+	predicate := func(b *CandleBuilder) bool {
+		return b.QuoteAssetVolume >= threshold
+	}
+
+	return NewCandlesAlgo(predicate)
 }

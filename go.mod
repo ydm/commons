@@ -6,6 +6,7 @@ require (
 	github.com/adshao/go-binance/v2 v2.3.4
 	github.com/alexander-yu/stream v0.0.0-20190408032938-f6f8149baa3a
 	github.com/go-numb/go-ftx v0.0.0-20210920234327-1ed716ff9977
+	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
 	github.com/rs/zerolog v1.26.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

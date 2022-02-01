@@ -75,6 +75,6 @@ func (c *ResourceChecker) Assert() {
 	}
 
 	if !leak {
-		What(log.Debug(), "no leakages detected")
+		What(log.Debug(), "no resource leakages detected")
 	}
 }
