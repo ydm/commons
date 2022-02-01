@@ -34,6 +34,7 @@ func (a *CandlesAlgo) Run(ctx AlgoContext, ticker Ticker) AlgoContext {
 
 			ans := ctx.Copy()
 			ans.Objects["candles"] = &a.Candles
+
 			return ans
 		}
 	}

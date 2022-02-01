@@ -6,3 +6,5 @@ linters:
     - scopelint                 # Deprecated.
     - maligned                  # Deprecated.
     - gomnd                     # Fucking annoying.
+    - godox                     # I'll have as much fucking TODOs as I want.
+    - forbidigo                 # Fuck you too!

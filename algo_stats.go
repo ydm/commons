@@ -1,38 +1,101 @@
 package commons
 
 import (
-	"fmt"
-
 	"github.com/markcheno/go-talib"
+	"github.com/rs/zerolog/log"
 )
 
-type StatsRSI struct {
-	InTimePeriod int
-}
-
-func (s StatsRSI) Run(input AlgoContext, ticker Ticker) (output AlgoContext) {
-	candles, ok := input.Objects["candles"].(*CircularArray)
-	if !ok {
-		panic("not candles")
+func defaultString(x, defaultValue string) string {
+	if x != "" {
+		return x
 	}
 
-	if candles.Len() < (s.InTimePeriod + 1) {
-		fmt.Printf("NOT ENOUGH CANDLES YET: %d\n", candles.Len())
+	return defaultValue
+}
+
+// +-----+
+// | RSI |
+// +-----+
+
+type StatsAlgoRSI struct {
+	InTimePeriod int
+	Key          string
+}
+
+func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.InTimePeriod + 1)
+	if err != nil {
+		Msg(log.Debug().Err(err))
 
 		return False
 	}
 
-	in := VWAPs(candles, s.InTimePeriod)
-	for i := range in {
-		fmt.Printf("in[%d]=%f\n", i, in[i])
+	vwaps := VWAPs(candles)
+	ans := talib.Rsi(vwaps, s.InTimePeriod)
+	key := defaultString(s.Key, "rsi")
+	last := len(ans) - 1
+	output := input.Copy()
+	output.Floats[key] = ans[last]
+
+	return output
+}
+
+// +-----+
+// | BOP |
+// +-----+
+
+type StatsAlgoBOP struct {
+	Key string
+}
+
+func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(1)
+	if err != nil {
+		Msg(log.Debug().Err(err))
+
+		return False
 	}
 
-	out := talib.Rsi(in, s.InTimePeriod)
-	// for i := range out {
-	// 	fmt.Printf("out[%d]=%f\n", i, out[i])
-	// }
-	ans := input.Copy()
-	ans.Floats["rsi"] = out[len(out)-1]
+	opens := Opens(candles)
+	highs := Highs(candles)
+	lows := Lows(candles)
+	closes := Closes(candles)
+	ans := talib.Bop(opens, highs, lows, closes)
+	key := defaultString(s.Key, "bop")
+	last := len(ans) - 1
+	output := input.Copy()
+	output.Floats[key] = ans[last]
 
-	return ans
+	return output
+}
+
+// +------------+
+// | Volume EMA |
+// +------------+
+
+type StatsAlgoVolumeEMA struct {
+	InTimePeriod int
+	Key          string
+}
+
+func (s StatsAlgoVolumeEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.InTimePeriod)
+	if err != nil {
+		Msg(log.Debug().Err(err))
+
+		return False
+	}
+
+	volumes := Volumes(candles)
+	ans := talib.Ma(volumes, s.InTimePeriod, talib.SMA)
+	key := defaultString(s.Key, "volume_ema")
+	last := len(ans) - 1
+	output := input.Copy()
+	output.Floats[key] = ans[last]
+
+	// PrintArrayF64(volumes, 2)
+	// PrintArrayF64(ans, 2)
+	// fmt.Printf("v=[%f %f] x=%f t=%t\n", volumes[0], volumes[1], ans[1], (volumes[0]+volumes[1])/2 == ans[1])
+
+	return output
 }

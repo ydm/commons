@@ -119,30 +119,49 @@ func (b *CandleBuilder) Clear() Candle {
 
 type Extractor func(c Candle) float64
 
-func MapCandles(f Extractor, a *CircularArray, m int) []float64 {
-	n := a.Len()
-	ans := make([]float64, m)
+func MapCandles(f Extractor, candles []Candle) []float64 {
+	n := len(candles)
+	ans := make([]float64, n)
 
-	for i := n - m; i < n; i++ {
-		candle, ok := a.At(i).(Candle)
-		if !ok {
-			panic("not a candle")
-		}
-
-		ans[i-n+m] = f(candle)
+	for i := 0; i < n; i++ {
+		ans[i] = f(candles[i])
 	}
 
 	return ans
 }
 
-func Closes(a *CircularArray, m int) []float64 {
+func Opens(candles []Candle) []float64 {
 	return MapCandles(func(c Candle) float64 {
-		return c.Close
-	}, a, m)
+		return c.Open
+	}, candles)
 }
 
-func VWAPs(a *CircularArray, m int) []float64 {
+func Highs(candles []Candle) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.High
+	}, candles)
+}
+
+func Lows(candles []Candle) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.Low
+	}, candles)
+}
+
+func Closes(candles []Candle) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.Close
+	}, candles)
+}
+
+func Volumes(candles []Candle) []float64 {
+	return MapCandles(func(c Candle) float64 {
+		return c.Volume
+	}, candles)
+}
+
+func VWAPs(candles []Candle) []float64 {
 	return MapCandles(func(c Candle) float64 {
 		return c.VWAP
-	}, a, m)
+	}, candles)
 }

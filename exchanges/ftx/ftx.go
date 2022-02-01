@@ -63,7 +63,6 @@ func (f *FTX) ChangeLeverage(symbol string, leverage int) error {
 	_, err := f.restClient.Leverage(&account.RequestForLeverage{
 		Leverage: leverage,
 	})
-
 	if err != nil {
 		return fmt.Errorf("ChangeLeverage failed: %w", err)
 	}

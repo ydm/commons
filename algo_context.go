@@ -1,6 +1,10 @@
 package commons
 
-import "github.com/rs/zerolog"
+import (
+	"errors"
+
+	"github.com/rs/zerolog"
+)
 
 // +-------------+
 // | AlgoContext |
@@ -59,7 +63,7 @@ func (c AlgoContext) Dict(dict *zerolog.Event) *zerolog.Event {
 		dict = zerolog.Dict()
 	}
 
-	// dict.Bool("__result__", c.Result)
+	dict.Bool("__result__", c.Result)
 
 	for k, v := range c.Bools {
 		dict.Bool(k, v)
@@ -78,6 +82,41 @@ func (c AlgoContext) Dict(dict *zerolog.Event) *zerolog.Event {
 	}
 
 	return dict
+}
+
+// +------+
+// | Misc |
+// +------+
+
+var (
+	ErrKeyNotFound      = errors.New("key not found")
+	ErrNotEnoughCandles = errors.New("not enough candles")
+	ErrNotCandle        = errors.New("object is not a candle")
+)
+
+func (c AlgoContext) Candles(n int) ([]Candle, error) {
+	candles, ok := c.Objects["candles"].(*CircularArray)
+	if !ok {
+		return nil, ErrKeyNotFound
+	}
+
+	length := candles.Len()
+	if length < n {
+		return nil, ErrNotEnoughCandles
+	}
+
+	ans := make([]Candle, n)
+
+	for i := 0; i < n; i++ {
+		candle, ok := candles.At(length - n + i).(Candle)
+		if !ok {
+			return ans, ErrNotCandle
+		}
+
+		ans[i] = candle
+	}
+
+	return ans, nil
 }
 
 // +-----------+
