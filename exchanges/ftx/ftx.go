@@ -64,7 +64,11 @@ func (f *FTX) ChangeLeverage(symbol string, leverage int) error {
 		Leverage: leverage,
 	})
 
-	return fmt.Errorf("ChangeLeverage failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("ChangeLeverage failed: %w", err)
+	}
+
+	return nil
 }
 
 func (f *FTX) Book1(ctx context.Context, symbol string) chan commons.Book1 {
