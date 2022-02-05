@@ -25,17 +25,19 @@ type StatsAlgoRSI struct {
 func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	candles, err := input.Candles(s.InTimePeriod + 1)
 	if err != nil {
-		Msg(log.Debug().Err(err))
+		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
 
 		return False
 	}
 
 	vwaps := VWAPs(candles)
-	ans := talib.Rsi(vwaps, s.InTimePeriod)
+	rsi := talib.Rsi(vwaps, s.InTimePeriod)
+
 	key := defaultString(s.Key, "rsi")
-	last := len(ans) - 1
+	last := len(rsi) - 1
+
 	output := input.Copy()
-	output.Floats[key] = ans[last]
+	output.Floats[key] = rsi[last]
 
 	return output
 }
@@ -51,7 +53,7 @@ type StatsAlgoBOP struct {
 func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	candles, err := input.Candles(1)
 	if err != nil {
-		Msg(log.Debug().Err(err))
+		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
 
 		return False
 	}
@@ -60,11 +62,13 @@ func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	highs := Highs(candles)
 	lows := Lows(candles)
 	closes := Closes(candles)
-	ans := talib.Bop(opens, highs, lows, closes)
+	bop := talib.Bop(opens, highs, lows, closes)
+
 	key := defaultString(s.Key, "bop")
-	last := len(ans) - 1
+	last := len(bop) - 1
+
 	output := input.Copy()
-	output.Floats[key] = ans[last]
+	output.Floats[key] = bop[last]
 
 	return output
 }
@@ -81,7 +85,7 @@ type StatsAlgoVolumeEMA struct {
 func (s StatsAlgoVolumeEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	candles, err := input.Candles(s.InTimePeriod)
 	if err != nil {
-		Msg(log.Debug().Err(err))
+		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
 
 		return False
 	}

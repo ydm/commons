@@ -94,6 +94,33 @@ var (
 	ErrNotCandle        = errors.New("object is not a candle")
 )
 
+func (c AlgoContext) Float(key string) float64 {
+	x, ok := c.Floats[key]
+	if !ok {
+		panic("need float " + key)
+	}
+
+	return x
+}
+
+func (c AlgoContext) Bool(key string) bool {
+	x, ok := c.Bools[key]
+	if !ok {
+		panic("need bool " + key)
+	}
+
+	return x
+}
+
+func (c AlgoContext) CandlesLen() int {
+	candles, ok := c.Objects["candles"].(*CircularArray)
+	if !ok {
+		return -1
+	}
+
+	return candles.Len()
+}
+
 func (c AlgoContext) Candles(n int) ([]Candle, error) {
 	candles, ok := c.Objects["candles"].(*CircularArray)
 	if !ok {
