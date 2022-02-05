@@ -88,5 +88,10 @@ func (a *CircularArray) Floats() []float64 {
 }
 
 func (a *CircularArray) LastFloat() float64 {
-	return a.Last().(float64)
+	x, ok := a.Last().(float64)
+	if !ok {
+		panic("invalid cast")
+	}
+
+	return x
 }

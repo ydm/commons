@@ -16,7 +16,7 @@ type BinanceFutures struct {
 	client *futures.Client
 }
 
-func New(apikey, secret string) commons.Exchange {
+func New(apikey, secret string) *BinanceFutures {
 	client := futures.NewClient(apikey, secret)
 
 	return &BinanceFutures{client}

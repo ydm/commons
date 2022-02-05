@@ -3,8 +3,10 @@ linters:
   disable:
     - golint                    # Deprecated.
     - interfacer                # Deprecated.
-    - scopelint                 # Deprecated.
     - maligned                  # Deprecated.
+    - scopelint                 # Deprecated.
+    - forbidigo                 # Fucking annoying.
+    - godox                     # Fucking annoying.
     - gomnd                     # Fucking annoying.
-    - godox                     # I'll have as much fucking TODOs as I want.
-    - forbidigo                 # Fuck you too!
+    - gomoddirectives           # Fucking annoying.
+    - varnamelen                # Fucking annoying.

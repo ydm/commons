@@ -18,7 +18,7 @@ type FTX struct {
 	restClient *rest.Client
 }
 
-func New(apikey, secret string) commons.Exchange {
+func New(apikey, secret string) *FTX {
 	return &FTX{
 		restClient: rest.New(auth.New(apikey, secret)),
 	}

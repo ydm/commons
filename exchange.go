@@ -43,7 +43,6 @@ type Exchange interface {
 	// ChangeMarginType should be invoked with marginType set to
 	// "crossed" or "isolated".
 	ChangeMarginType(symbol, marginType string) error
-
 	ChangeLeverage(symbol string, leverage int) error
 
 	// [2] Streams.
