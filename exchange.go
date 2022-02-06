@@ -27,9 +27,18 @@ type Book1 struct {
 }
 
 type CreateOrderResponse struct {
+	OrderID          string
+	ClientOrderID    string
 	ExecutedQuantity string
 	AvgPrice         string
 }
+
+type OrderUpdate struct {
+	ClientOrderID string
+	Status        string
+}
+
+type OrderUpdateCallback = func(OrderUpdate)
 
 type Exchange interface {
 	// [1] API calls.
@@ -38,7 +47,7 @@ type Exchange interface {
 	//
 	// - side: buy or sell,
 	// - orderType: market (just that for now).
-	CreateOrder(symbol, side, orderType, quantityStr string, reduceOnly bool) (CreateOrderResponse, error)
+	CreateOrder(symbol, side, orderType, priceStr, quantityStr string, reduceOnly bool) (CreateOrderResponse, error)
 
 	// ChangeMarginType should be invoked with marginType set to
 	// "crossed" or "isolated".
@@ -48,4 +57,7 @@ type Exchange interface {
 	// [2] Streams.
 	Book1(ctx context.Context, symbol string) chan Book1
 	Trade(ctx context.Context, symbol string) chan Trade
+
+	// [3] Events.
+	OnOrderUpdate(clientOrderID string, callback OrderUpdateCallback)
 }

@@ -1,5 +1,11 @@
 package commons
 
+import (
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
 // Pass a copy to make sure it's not changed.  MB this isn't smart.
 // As long it's not a bottleneck, I don't give a fuck.  Plus, I
 // wouldn't be surprised if the runtime actually optimizes this.
@@ -9,6 +15,7 @@ type CandlesAlgo struct {
 	Candles   CircularArray
 	builder   CandleBuilder
 	predicate Predicate
+	last      time.Time
 }
 
 func NewCandlesAlgo(predicate Predicate) *CandlesAlgo {
@@ -16,10 +23,11 @@ func NewCandlesAlgo(predicate Predicate) *CandlesAlgo {
 		Candles:   NewCircularArray(256),
 		builder:   NewCandleBuilder(),
 		predicate: predicate,
+		last:      time.Now().UTC(),
 	}
 }
 
-func (a *CandlesAlgo) Run(ctx AlgoContext, ticker Ticker) AlgoContext {
+func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	if ticker.Last == TradeUpdate {
 		a.builder.Push(ticker)
 
@@ -30,9 +38,19 @@ func (a *CandlesAlgo) Run(ctx AlgoContext, ticker Ticker) AlgoContext {
 		// Produce and publish candle.
 		if clear {
 			candle := a.builder.Clear()
+
+			// Adjust times.
+			since := time.Since(a.last)
+			a.last = time.Now().UTC()
+
+			// Log candle.
+			What(log.Debug().Interface("candle", candle).Dur("dur", since), "producing new candle")
+
+			// Add to array.
 			a.Candles.Push(candle)
 
-			output := ctx.Copy()
+			// Create output context and add candles.
+			output := input.Copy()
 			output.Objects["candles"] = &a.Candles
 
 			return output

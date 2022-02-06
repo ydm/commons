@@ -124,7 +124,8 @@ func SetupLogger(c LogConfig) error {
 
 	// Set desired time format.
 	zerolog.DurationFieldInteger = false
-	zerolog.DurationFieldUnit = time.Millisecond
+	// zerolog.DurationFieldUnit = time.Millisecond
+	zerolog.DurationFieldUnit = time.Second
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.TimestampFunc = func() time.Time {
 		return time.Now().UTC()

@@ -22,12 +22,14 @@ func switchSideString(side string, buy, sell string) string {
 	}
 }
 
-func switchTypeString(orderType, market, limit string) string {
+func switchTypeString(orderType, market, limit, stopMarket string) string {
 	switch orderType {
-	case "market":
+	case orderTypeMarket:
 		return market
-	case "limit":
+	case orderTypeLimit:
 		return limit
+	case orderTypeStopMarket:
+		return stopMarket
 	}
 
 	panic(orderType)
