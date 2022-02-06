@@ -112,8 +112,10 @@ func (c AlgoContext) Bool(key string) bool {
 	return x
 }
 
-func (c AlgoContext) CandlesLen() int {
-	candles, ok := c.Objects["candles"].(*CircularArray)
+func (c AlgoContext) CandlesLen(key string) int {
+	key = DefaultString(key, "candles")
+
+	candles, ok := c.Objects[key].(*CircularArray)
 	if !ok {
 		return -1
 	}
@@ -121,8 +123,10 @@ func (c AlgoContext) CandlesLen() int {
 	return candles.Len()
 }
 
-func (c AlgoContext) Candles(n int) ([]Candle, error) {
-	candles, ok := c.Objects["candles"].(*CircularArray)
+func (c AlgoContext) Candles(key string, n int) ([]Candle, error) {
+	key = DefaultString(key, "candles")
+
+	candles, ok := c.Objects[key].(*CircularArray)
 	if !ok {
 		return nil, ErrKeyNotFound
 	}

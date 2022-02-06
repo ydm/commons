@@ -1,17 +1,11 @@
 package commons
 
 import (
+	"fmt"
+
 	"github.com/markcheno/go-talib"
 	"github.com/rs/zerolog/log"
 )
-
-func defaultString(x, defaultValue string) string {
-	if x != "" {
-		return x
-	}
-
-	return defaultValue
-}
 
 // +-----+
 // | RSI |
@@ -20,12 +14,13 @@ func defaultString(x, defaultValue string) string {
 type StatsAlgoRSI struct {
 	InTimePeriod int
 	Key          string
+	CandlesKey   string
 }
 
 func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.InTimePeriod + 1)
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod+1)
 	if err != nil {
-		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
+		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen(s.CandlesKey)))
 
 		return False
 	}
@@ -33,7 +28,7 @@ func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	vwaps := VWAPs(candles)
 	rsi := talib.Rsi(vwaps, s.InTimePeriod)
 
-	key := defaultString(s.Key, "rsi")
+	key := DefaultString(s.Key, "rsi")
 	last := len(rsi) - 1
 
 	output := input.Copy()
@@ -47,13 +42,14 @@ func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
 // +-----+
 
 type StatsAlgoBOP struct {
-	Key string
+	Key        string
+	CandlesKey string
 }
 
 func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(1)
+	candles, err := input.Candles(s.CandlesKey, 1)
 	if err != nil {
-		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
+		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen(s.CandlesKey)))
 
 		return False
 	}
@@ -64,7 +60,7 @@ func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	closes := Closes(candles)
 	bop := talib.Bop(opens, highs, lows, closes)
 
-	key := defaultString(s.Key, "bop")
+	key := DefaultString(s.Key, "bop")
 	last := len(bop) - 1
 
 	output := input.Copy()
@@ -73,33 +69,70 @@ func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	return output
 }
 
+// +----------+
+// | Price MA |
+// +----------+
+
+type StatsAlgoPriceMA struct {
+	InTimePeriod int
+	Key          string
+	CandlesKey   string
+}
+
+func (s StatsAlgoPriceMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	if err != nil {
+		Msg(
+			log.Debug().
+				Err(err).
+				Int("want", s.InTimePeriod).
+				Int("have", input.CandlesLen(s.CandlesKey)),
+		)
+
+		return False
+	}
+
+	closes := Closes(candles)
+	ans := talib.Ma(closes, s.InTimePeriod, talib.SMA)
+
+	key := DefaultString(s.Key, fmt.Sprintf("ma%d", s.InTimePeriod))
+	last := len(ans) - 1
+
+	output := input.Copy()
+	output.Floats[key] = ans[last]
+
+	return output
+}
+
 // +------------+
 // | Volume EMA |
 // +------------+
 
-type StatsAlgoVolumeEMA struct {
+type StatsAlgoVolumeMA struct {
 	InTimePeriod int
 	Key          string
+	CandlesKey   string
 }
 
-func (s StatsAlgoVolumeEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.InTimePeriod)
+func (s StatsAlgoVolumeMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
 	if err != nil {
-		Msg(log.Debug().Err(err).Int("candles", input.CandlesLen()))
+		Msg(
+			log.Debug().
+				Err(err).
+				Int("want", s.InTimePeriod).
+				Int("have", input.CandlesLen(s.CandlesKey)),
+		)
 
 		return False
 	}
 
 	volumes := Volumes(candles)
 	ans := talib.Ma(volumes, s.InTimePeriod, talib.SMA)
-	key := defaultString(s.Key, "volume_ema")
+	key := DefaultString(s.Key, "volume_ema")
 	last := len(ans) - 1
 	output := input.Copy()
 	output.Floats[key] = ans[last]
-
-	// PrintArrayF64(volumes, 2)
-	// PrintArrayF64(ans, 2)
-	// fmt.Printf("v=[%f %f] x=%f t=%t\n", volumes[0], volumes[1], ans[1], (volumes[0]+volumes[1])/2 == ans[1])
 
 	return output
 }

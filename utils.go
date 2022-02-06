@@ -6,6 +6,14 @@ import (
 	"fmt"
 )
 
+func DefaultString(x, defaultValue string) string {
+	if x != "" {
+		return x
+	}
+
+	return defaultValue
+}
+
 // RandomOrderID uses code and ideas from:
 // https://stackoverflow.com/questions/32349807 and
 // https://stackoverflow.com/questions/13378815 .

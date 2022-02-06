@@ -16,14 +16,18 @@ type CandlesAlgo struct {
 	builder   CandleBuilder
 	predicate Predicate
 	last      time.Time
+	key       string
 }
 
-func NewCandlesAlgo(predicate Predicate) *CandlesAlgo {
+func NewCandlesAlgo(predicate Predicate, key string) *CandlesAlgo {
+	key = DefaultString(key, "candles")
+
 	return &CandlesAlgo{
 		Candles:   NewCircularArray(256),
 		builder:   NewCandleBuilder(),
 		predicate: predicate,
 		last:      time.Now().UTC(),
+		key:       key,
 	}
 }
 
@@ -51,7 +55,7 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 
 			// Create output context and add candles.
 			output := input.Copy()
-			output.Objects["candles"] = &a.Candles
+			output.Objects[a.key] = &a.Candles
 
 			return output
 		}
@@ -64,34 +68,34 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 // | Tick candles |
 // +--------------+
 
-func NewTickCandlesAlgo(numTicks int) *CandlesAlgo {
+func NewTickCandlesAlgo(numTicks int, key string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.NumberOfTrades >= numTicks
 	}
 
-	return NewCandlesAlgo(predicate)
+	return NewCandlesAlgo(predicate, key)
 }
 
 // +----------------+
 // | Volume candles |
 // +----------------+
 
-func NewVolumeCandlesAlgo(volumeThreshold float64) *CandlesAlgo {
+func NewVolumeCandlesAlgo(volumeThreshold float64, key string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.Volume >= volumeThreshold
 	}
 
-	return NewCandlesAlgo(predicate)
+	return NewCandlesAlgo(predicate, key)
 }
 
 // +-----------+
 // | $ candles |
 // +-----------+
 
-func NewDollarCandlesAlgo(threshold float64) *CandlesAlgo {
+func NewDollarCandlesAlgo(threshold float64, key string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.QuoteAssetVolume >= threshold
 	}
 
-	return NewCandlesAlgo(predicate)
+	return NewCandlesAlgo(predicate, key)
 }
