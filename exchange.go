@@ -47,7 +47,17 @@ type Exchange interface {
 	//
 	// - side: buy or sell,
 	// - orderType: market (just that for now).
-	CreateOrder(symbol, side, orderType, priceStr, quantityStr string, reduceOnly bool) (CreateOrderResponse, error)
+	CreateOrder(
+		symbol string,
+		side string,
+		orderType string,
+		priceStr string,
+		quantityStr string,
+		clientOrderID string,
+		reduceOnly bool,
+	) (CreateOrderResponse, error)
+
+	CancelOrder(symbol string, clientOrderID string) error
 
 	// ChangeMarginType should be invoked with marginType set to
 	// "crossed" or "isolated".

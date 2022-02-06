@@ -228,6 +228,7 @@ func (b *BinanceFutures) CreateOrder(
 	orderType string,
 	priceStr string,
 	quantityStr string,
+	clientOrderID string,
 	reduceOnly bool,
 ) (commons.CreateOrderResponse, error) {
 	futuresSide := binanceSide(side)
@@ -242,25 +243,29 @@ func (b *BinanceFutures) CreateOrder(
 		Quantity(quantityStr).
 		ReduceOnly(reduceOnly).
 		// Price
-		// ClientOrderID
+		// NewClientOrderID(clientOrderID).
 		// StopPrice
 		// WorkingType
-		WorkingType(futures.WorkingTypeContractPrice).
+		WorkingType(futures.WorkingTypeMarkPrice).
 		// ActivationPrice
 		// CallbackRate (TODO)
 		PriceProtect(true).
 		NewOrderResponseType(futures.NewOrderRespTypeRESULT)
 	//     ClosePosition(false)
 
-	switch orderType {
-	case orderTypeLimit:
-		service = service.Price(priceStr)
-	case orderTypeStopMarket:
-		service = service.StopPrice(priceStr)
+	if clientOrderID != "" {
+		service = service.NewClientOrderID(clientOrderID)
 	}
 
-	if orderType == orderTypeLimit || orderType == orderTypeStopMarket {
-		service = service.TimeInForce(futures.TimeInForceTypeGTC)
+	switch orderType {
+	case orderTypeLimit:
+		service = service.
+			TimeInForce(futures.TimeInForceTypeGTC).
+			Price(priceStr)
+	case orderTypeStopMarket:
+		service = service.
+			TimeInForce(futures.TimeInForceTypeGTC).
+			StopPrice(priceStr)
 	}
 
 	res, err := service.Do(context.Background())
@@ -281,6 +286,28 @@ func (b *BinanceFutures) CreateOrder(
 		ExecutedQuantity: res.ExecutedQuantity,
 		AvgPrice:         res.AvgPrice,
 	}, nil
+}
+
+func (b *BinanceFutures) CancelOrder(symbol string, clientOrderID string) error {
+	service := b.client.NewCancelOrderService().
+		Symbol(symbol).
+		OrigClientOrderID(clientOrderID)
+
+	resp, err := service.Do(context.Background())
+
+	if err != nil {
+		return wrap(err, "cancel order failed")
+	}
+
+	if resp.ClientOrderID != clientOrderID {
+		commons.Msg(
+			log.Fatal().
+				Str("clientOrderID", clientOrderID).
+				Str("resp.ClientOrderID", resp.ClientOrderID),
+		)
+	}
+
+	return nil
 }
 
 func (b *BinanceFutures) ChangeMarginType(symbol, marginType string) error {
