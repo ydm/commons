@@ -58,7 +58,13 @@ func TPSL(
 		)
 
 		if err := exchange.CancelOrder(symbol, stopLossID); err != nil {
-			What(log.Warn().Err(err), "failed to cancel stop_loss after take profit got executed")
+			What(
+				log.Warn().
+					Err(err).
+					Str("symbol", symbol).
+					Str("stopLossID", stopLossID),
+				"failed to cancel stop_loss after take profit got executed",
+			)
 		}
 	})
 
@@ -73,7 +79,13 @@ func TPSL(
 		)
 
 		if err := exchange.CancelOrder(symbol, takeProfitID); err != nil {
-			What(log.Warn().Err(err), "failed to cancel stop_loss after take profit got executed")
+			What(
+				log.Warn().
+					Err(err).
+					Str("symbol", symbol).
+					Str("takeProfitID", takeProfitID),
+				"failed to cancel stop_loss after take profit got executed",
+			)
 		}
 	})
 
