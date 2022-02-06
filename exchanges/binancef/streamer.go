@@ -87,7 +87,7 @@ func (s BaseSpotStreamService) Keepalive(ctx context.Context, listenKey string) 
 
 type StreamService interface {
 	BaseStreamService
-	Feed(ctx context.Context, listenKey string, events chan interface{}) (doneC, stopC chan struct{}, err error)
+	Feed(listenKey string, events chan interface{}) (doneC, stopC chan struct{}, err error)
 }
 
 // +----------------------+
@@ -120,7 +120,7 @@ func (s FuturesStreamService) Keepalive(ctx context.Context, listenKey string) e
 	return wrap(err, "keepalive failed")
 }
 
-func (s FuturesStreamService) Feed(ctx context.Context, listenKey string, events chan interface{}) (
+func (s FuturesStreamService) Feed(listenKey string, events chan interface{}) (
 	doneC,
 	stopC chan struct{},
 	err error,
@@ -164,12 +164,13 @@ func (s SpotStreamService) Keepalive(ctx context.Context, listenKey string) erro
 	return s.base.Keepalive(ctx, listenKey)
 }
 
-func (s SpotStreamService) Feed(ctx context.Context, listenKey string, events chan interface{}) (
+func (s SpotStreamService) Feed(listenKey string, events chan interface{}) (
 	doneC,
 	stopC chan struct{},
 	err error,
 ) {
-	doneC, stopC, err = binance.WsUserDataServe(listenKey,
+	doneC, stopC, err = binance.WsUserDataServe(
+		listenKey,
 		func(event *binance.WsUserDataEvent) {
 			events <- event
 		},
@@ -220,7 +221,7 @@ func (s *Streamer) loop(ctx context.Context) (err error) {
 	for ctx.Err() == nil {
 		// For the Do() method I'm not using ctx, because in case of a closed
 		// context, it panics...  TODO: Commit a patch!
-		listenKey, err := s.service.Start(ctx)
+		listenKey, err := s.service.Start(context.Background()) //nolint:contextcheck
 		if err != nil {
 			return fmt.Errorf("service start failed: %w", err)
 		}
@@ -239,7 +240,7 @@ func (s *Streamer) loop(ctx context.Context) (err error) {
 			"starting user stream",
 		)
 
-		done, stop, err := s.service.Feed(ctx, listenKey, s.Events)
+		done, stop, err := s.service.Feed(listenKey, s.Events)
 		if err != nil {
 			commons.Msg(log.Error().Err(err))
 			time.Sleep(15 * time.Second)
@@ -269,7 +270,8 @@ func (s *Streamer) closeWhenDone(ctx context.Context, done, stop chan struct{}, 
 
 	commons.What(log.Info().Str("listenKey", listenKey), "closing user stream")
 
-	if err := s.service.Close(ctx, listenKey); err != nil {
+	err := s.service.Close(context.Background(), listenKey) //nolint:contextcheck
+	if err != nil {
 		commons.Msg(log.Error().Err(err))
 	}
 }
@@ -281,7 +283,8 @@ func (s *Streamer) keepalive(ctx context.Context, done <-chan struct{}, listenKe
 	for {
 		select {
 		case <-ticker.C:
-			err := s.service.Keepalive(ctx, listenKey)
+			err := s.service.Keepalive(context.Background(), listenKey) //nolint:contextcheck
+
 			if err != nil {
 				commons.Msg(log.Warn().Err(err).Str("listenKey", listenKey))
 			} else {

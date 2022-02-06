@@ -44,7 +44,7 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 			a.last = time.Now().UTC()
 
 			// Log candle.
-			What(log.Debug().Interface("candle", candle).Dur("dur", since), "producing new candle")
+			Code(log.Trace().Interface("candle", candle).Dur("dur", since), "candle")
 
 			// Add to array.
 			a.Candles.Push(candle)

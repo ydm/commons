@@ -133,12 +133,17 @@ type BinanceFutures struct {
 	orderUpdateMutex     sync.Mutex
 }
 
-func New(apikey, secret string) *BinanceFutures {
+func New(ctx context.Context, apikey, secret string) *BinanceFutures {
 	client := futures.NewClient(apikey, secret)
 
-	// Solves some time window problems.
-	if _, err := client.NewSetServerTimeService().Do(context.Background()); err != nil {
+	// Synchronize with server by adjusting an internal time offset.
+	service := client.NewSetServerTimeService()
+	timeOffset, err := service.Do(context.Background()) //nolint:contextcheck
+
+	if err != nil {
 		panic(err)
+	} else {
+		commons.What(log.Info().Int64("timeOffset", timeOffset), "initialized server time offset")
 	}
 
 	ans := &BinanceFutures{
@@ -148,50 +153,15 @@ func New(apikey, secret string) *BinanceFutures {
 		orderUpdateMutex:     sync.Mutex{},
 	}
 
-	ans.streamer.Loop(context.Background())
+	// Start event loop.  It runs until context is cancelled.
+	ans.streamer.Loop(ctx)
 
-	// TODO: Move that out!
+	// Handle events in a separate goroutine.
 	go func() {
 		commons.Checker.Push()
 		defer commons.Checker.Pop()
 
-		for pointer := range ans.streamer.Events {
-			event, ok := pointer.(*futures.WsUserDataEvent)
-			if !ok {
-				panic("TODO")
-			}
-
-			if event.Event == futures.UserDataEventTypeOrderTradeUpdate {
-				var (
-					node  orderUpdateNode
-					found = false
-				)
-
-				ans.orderUpdateMutex.Lock()
-				n := ans.orderUpdateCallbacks.Len()
-				for i := 0; i < n; i++ {
-					item := ans.orderUpdateCallbacks.At(i)
-					node, ok = item.(orderUpdateNode)
-					if !ok {
-						panic("TODO")
-					}
-
-					if node.clientOrderID == event.OrderTradeUpdate.ClientOrderID {
-						found = true
-						break
-					}
-				}
-				ans.orderUpdateMutex.Unlock()
-
-				if found {
-					update := commons.OrderUpdate{
-						ClientOrderID: event.OrderTradeUpdate.ClientOrderID,
-						Status:        string(event.OrderTradeUpdate.Status),
-					}
-					node.callback(update)
-				}
-			}
-		}
+		ans.handleEvents()
 	}()
 
 	return ans
@@ -222,6 +192,7 @@ func binanceOrderType(orderType string) futures.OrderType {
 	)
 }
 
+//nolint:funlen
 func (b *BinanceFutures) CreateOrder(
 	symbol string,
 	side string,
@@ -294,7 +265,6 @@ func (b *BinanceFutures) CancelOrder(symbol string, clientOrderID string) error 
 		OrigClientOrderID(clientOrderID)
 
 	resp, err := service.Do(context.Background())
-
 	if err != nil {
 		return wrap(err, "cancel order failed")
 	}
@@ -370,7 +340,60 @@ type orderUpdateNode struct {
 
 func (b *BinanceFutures) OnOrderUpdate(clientOrderID string, callback commons.OrderUpdateCallback) {
 	node := orderUpdateNode{clientOrderID, callback}
+
+	// Make sure nobody else modifies orderUpdateCallbacks.
 	b.orderUpdateMutex.Lock()
+	defer b.orderUpdateMutex.Unlock()
+
+	// Push to orderUpdateCallbacks.
 	b.orderUpdateCallbacks.Push(node)
-	b.orderUpdateMutex.Unlock()
+}
+
+func (b *BinanceFutures) handleEvents() {
+	for pointer := range b.streamer.Events {
+		event, ok := pointer.(*futures.WsUserDataEvent)
+		if !ok {
+			panic("TODO")
+		}
+
+		if event.Event == futures.UserDataEventTypeOrderTradeUpdate {
+			var (
+				node  orderUpdateNode
+				found = false
+			)
+
+			// Beginning of locked section.
+			b.orderUpdateMutex.Lock()
+
+			// Iterate over all callbacks.
+			n := b.orderUpdateCallbacks.Len()
+			for i := 0; i < n; i++ {
+				item := b.orderUpdateCallbacks.At(i)
+
+				node, ok = item.(orderUpdateNode)
+				if !ok {
+					panic("TODO")
+				}
+
+				if node.clientOrderID == event.OrderTradeUpdate.ClientOrderID {
+					// We found the proper callback for this order.
+					// It has to be executed outside of the locked
+					// section, so we just mark it as found.
+					found = true
+
+					break
+				}
+			}
+
+			b.orderUpdateMutex.Unlock()
+
+			if found {
+				update := commons.OrderUpdate{
+					ClientOrderID: event.OrderTradeUpdate.ClientOrderID,
+					Status:        string(event.OrderTradeUpdate.Status),
+				}
+				node.callback(update)
+			}
+		}
+	}
 }

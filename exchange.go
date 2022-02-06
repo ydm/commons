@@ -56,7 +56,6 @@ type Exchange interface {
 		clientOrderID string,
 		reduceOnly bool,
 	) (CreateOrderResponse, error)
-
 	CancelOrder(symbol string, clientOrderID string) error
 
 	// ChangeMarginType should be invoked with marginType set to

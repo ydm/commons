@@ -13,6 +13,26 @@ func oppositeSide(side string) string {
 	}
 }
 
+func create(exchange Exchange, symbol, side, orderType, price, quantity, id string) {
+	resp, err := exchange.CreateOrder(symbol, side, orderType, price, quantity, id, true)
+
+	if err != nil {
+		What(log.Warn().Err(err), "create order failed")
+	} else {
+		What(
+			log.Info().
+				Str("symbol", symbol).
+				Str("side", side).
+				Str("type", orderType).
+				Str("price", price).
+				Str("quantity", quantity).
+				Str("clientOrderID", id).
+				Interface("resp", resp),
+			"created aTPSL order",
+		)
+	}
+}
+
 func TPSL(
 	exchange Exchange,
 	symbol string,
@@ -32,7 +52,10 @@ func TPSL(
 			return
 		}
 
-		What(log.Info().Interface("update", update)
+		What(
+			log.Info().Interface("update", update).Str("stopLossID", stopLossID),
+			"take profit order filled, will now cancel stop loss",
+		)
 
 		if err := exchange.CancelOrder(symbol, stopLossID); err != nil {
 			What(log.Warn().Err(err), "failed to cancel stop_loss after take profit got executed")
@@ -44,40 +67,17 @@ func TPSL(
 			return
 		}
 
+		What(
+			log.Info().Interface("update", update).Str("takeProfitID", takeProfitID),
+			"stop loss order filled, will now cancel take profit",
+		)
+
 		if err := exchange.CancelOrder(symbol, takeProfitID); err != nil {
 			What(log.Warn().Err(err), "failed to cancel stop_loss after take profit got executed")
 		}
 	})
 
 	// Next, create two new orders simultaneously.
-
-	go func() {
-		_, err := exchange.CreateOrder(
-			symbol,
-			closeSide,
-			"stop_market",
-			stopLossPrice,
-			quantityStr,
-			stopLossID,
-			true,
-		)
-
-		if err != nil {
-			What(log.Warn().Err(err), "create order failed")
-		}
-	}()
-
-	_, err := exchange.CreateOrder(
-		symbol,
-		closeSide,
-		"limit",
-		takeProfitPrice,
-		quantityStr,
-		takeProfitID,
-		true,
-	)
-
-	if err != nil {
-		What(log.Warn().Err(err), "create order failed")
-	}
+	go create(exchange, symbol, closeSide, "stop_market", stopLossPrice, quantityStr, stopLossID)
+	create(exchange, symbol, closeSide, "limit", takeProfitPrice, quantityStr, takeProfitID)
 }
