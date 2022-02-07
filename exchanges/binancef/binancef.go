@@ -128,7 +128,7 @@ var ErrLeverageNotSet = errors.New("leverage not set")
 
 type BinanceFutures struct {
 	client               *futures.Client
-	streamer             Streamer
+	streamer             *Streamer
 	orderUpdateCallbacks commons.CircularArray
 	orderUpdateMutex     sync.Mutex
 }
@@ -146,23 +146,30 @@ func New(ctx context.Context, apikey, secret string) *BinanceFutures {
 		commons.What(log.Info().Int64("timeOffset", timeOffset), "initialized server time offset")
 	}
 
+	var streamer *Streamer = nil
+	if apikey != "" && secret != "" {
+		streamer = NewStreamer(NewFuturesStreamService(client))
+	}
+
 	ans := &BinanceFutures{
 		client:               client,
-		streamer:             *NewStreamer(NewFuturesStreamService(client)),
+		streamer:             streamer,
 		orderUpdateCallbacks: commons.NewCircularArray(256),
 		orderUpdateMutex:     sync.Mutex{},
 	}
 
-	// Start event loop.  It runs until context is cancelled.
-	ans.streamer.Loop(ctx)
+	if ans.streamer != nil {
+		// Handle streamed events in a separate goroutine.
+		go func() {
+			commons.Checker.Push()
+			defer commons.Checker.Pop()
 
-	// Handle events in a separate goroutine.
-	go func() {
-		commons.Checker.Push()
-		defer commons.Checker.Pop()
+			ans.handleEvents()
+		}()
 
-		ans.handleEvents()
-	}()
+		// Start event loop.  It runs until context is cancelled.
+		ans.streamer.Loop(ctx)
+	}
 
 	return ans
 }

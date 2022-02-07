@@ -1,6 +1,8 @@
 package commons
 
 import (
+	"time"
+
 	"github.com/alexander-yu/stream/minmax"
 )
 
@@ -19,6 +21,7 @@ type Candle struct {
 	NumberOfTrades           int
 	TakerBuyBaseAssetVolume  float64
 	TakerBuyQuoteAssetVolume float64
+	CloseTime                time.Time
 }
 
 // +---------------+
@@ -98,6 +101,7 @@ func (b *CandleBuilder) Clear() Candle {
 		NumberOfTrades:           b.NumberOfTrades,
 		TakerBuyBaseAssetVolume:  b.TakerBuyBaseAssetVolume,
 		TakerBuyQuoteAssetVolume: b.TakerBuyQuoteAssetVolume,
+		CloseTime:                time.Now().UTC(),
 	}
 
 	b.Open = 0
