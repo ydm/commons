@@ -42,8 +42,8 @@ func TPSL(
 	stopLossPrice string,
 ) {
 	closeSide := oppositeSide(openSide)
-	takeProfitID := RandomOrderID("")
-	stopLossID := RandomOrderID("")
+	takeProfitID := RandomOrderID("TP_")
+	stopLossID := RandomOrderID("SL_")
 
 	// First make sure we handle order filled events.
 
@@ -54,16 +54,18 @@ func TPSL(
 
 		What(
 			log.Info().Interface("update", update).Str("stopLossID", stopLossID),
-			"take profit order filled, will now cancel stop loss",
+			"take_profit order filled, will now cancel stop_loss",
 		)
 
-		if err := exchange.CancelOrder(symbol, stopLossID); err != nil {
+		err := exchange.CancelOrder(symbol, stopLossID)
+
+		if err != nil && err.Error() != "<APIError> code=-2011, msg=Unknown order sent." {
 			What(
 				log.Warn().
 					Err(err).
 					Str("symbol", symbol).
 					Str("stopLossID", stopLossID),
-				"failed to cancel stop_loss after take profit got executed",
+				"failed to cancel stop_loss after take_profit got filled",
 			)
 		}
 	})
@@ -75,16 +77,18 @@ func TPSL(
 
 		What(
 			log.Info().Interface("update", update).Str("takeProfitID", takeProfitID),
-			"stop loss order filled, will now cancel take profit",
+			"stop_loss order filled, will now cancel take_profit",
 		)
 
-		if err := exchange.CancelOrder(symbol, takeProfitID); err != nil {
+		err := exchange.CancelOrder(symbol, takeProfitID)
+
+		if err != nil && err.Error() != "<APIError> code=-2011, msg=Unknown order sent." {
 			What(
 				log.Warn().
 					Err(err).
 					Str("symbol", symbol).
 					Str("takeProfitID", takeProfitID),
-				"failed to cancel stop_loss after take profit got executed",
+				"failed to cancel take_profit after stop_loss got filled",
 			)
 		}
 	})
