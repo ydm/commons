@@ -103,21 +103,15 @@ func NewFuturesStreamService(client *futures.Client) FuturesStreamService {
 }
 
 func (s FuturesStreamService) Start(ctx context.Context) (listenKey string, err error) {
-	listenKey, err = s.base.Start(ctx)
-
-	return listenKey, wrap(err, "start failed")
+	return s.base.Start(ctx)
 }
 
 func (s FuturesStreamService) Close(ctx context.Context, listenKey string) error {
-	err := s.base.Close(ctx, listenKey)
-
-	return wrap(err, "close failed")
+	return s.base.Close(ctx, listenKey)
 }
 
 func (s FuturesStreamService) Keepalive(ctx context.Context, listenKey string) error {
-	err := s.base.Keepalive(ctx, listenKey)
-
-	return wrap(err, "keepalive failed")
+	return s.base.Keepalive(ctx, listenKey)
 }
 
 func (s FuturesStreamService) Feed(listenKey string, events chan interface{}) (
@@ -220,10 +214,10 @@ func (s *Streamer) loop(ctx context.Context) (err error) {
 
 	for ctx.Err() == nil {
 		// For the Do() method I'm not using ctx, because in case of a closed
-		// context, it panics...  TODO: Commit a patch!
+		// context, it panics.  And we still want to shut down gracefully.
 		listenKey, err := s.service.Start(context.Background()) //nolint:contextcheck
 		if err != nil {
-			return fmt.Errorf("service start failed: %w", err)
+			return wrap(err, "service start failed")
 		}
 
 		// This is an ugly workaround for a bug (in Binance's API) I'm too lazy to
@@ -236,14 +230,16 @@ func (s *Streamer) loop(ctx context.Context) (err error) {
 
 		previousListenKey = listenKey
 		commons.What(
-			log.Info().Str("listenKey", listenKey),
+			log.Info().
+				Str("previousListenKey", previousListenKey).
+				Str("listenKey", listenKey),
 			"starting user stream",
 		)
 
 		done, stop, err := s.service.Feed(listenKey, s.Events)
 		if err != nil {
 			commons.Msg(log.Error().Err(err))
-			time.Sleep(15 * time.Second)
+			time.Sleep(5 * time.Second)
 
 			continue
 		}
