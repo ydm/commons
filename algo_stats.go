@@ -121,14 +121,14 @@ type StatsAlgoCMO struct {
 }
 
 func (s StatsAlgoCMO) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod+1)
 	if err != nil {
 		Msg(
 			log.Debug().
 				Err(err).
 				Str("key", s.Key).
 				Str("candlesKey", s.CandlesKey).
-				Int("want", s.InTimePeriod).
+				Int("want", s.InTimePeriod+1).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
 
@@ -158,14 +158,14 @@ type StatsAlgoPriceEMA struct {
 }
 
 func (s StatsAlgoPriceEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod+1)
 	if err != nil {
 		Msg(
 			log.Debug().
 				Err(err).
 				Str("key", s.Key).
 				Str("candlesKey", s.CandlesKey).
-				Int("want", s.InTimePeriod).
+				Int("want", s.InTimePeriod+1).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
 
@@ -195,14 +195,14 @@ type StatsAlgoPriceMA struct {
 }
 
 func (s StatsAlgoPriceMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod+1)
 	if err != nil {
 		Msg(
 			log.Debug().
 				Err(err).
 				Str("key", s.Key).
 				Str("candlesKey", s.CandlesKey).
-				Int("want", s.InTimePeriod).
+				Int("want", s.InTimePeriod+1).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
 
@@ -232,14 +232,14 @@ type StatsAlgoVolumeMA struct {
 }
 
 func (s StatsAlgoVolumeMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod+1)
 	if err != nil {
 		Msg(
 			log.Debug().
 				Err(err).
 				Str("key", s.Key).
 				Str("candlesKey", s.CandlesKey).
-				Int("want", s.InTimePeriod).
+				Int("want", s.InTimePeriod+1).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
 
