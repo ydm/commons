@@ -37,6 +37,45 @@ func (s StatsAlgoRSI) Run(input AlgoContext, ticker Ticker) AlgoContext {
 	return output
 }
 
+// +----+
+// | AD |
+// +----+
+
+type StatsAlgoAD struct {
+	FastPeriod int
+	SlowPeriod int
+	Key        string
+	CandlesKey string
+}
+
+func (s StatsAlgoAD) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.CandlesKey, s.SlowPeriod+1)
+	if err != nil {
+		Msg(
+			log.Debug().
+				Err(err).
+				Int("want", s.SlowPeriod+1).
+				Int("have", input.CandlesLen(s.CandlesKey)),
+		)
+
+		return False
+	}
+
+	highs := Highs(candles)
+	lows := Lows(candles)
+	closes := Closes(candles)
+	volumes := Volumes(candles)
+	ans := talib.AdOsc(highs, lows, closes, volumes, s.FastPeriod, s.SlowPeriod)
+
+	key := DefaultString(s.Key, fmt.Sprintf("ad_%d_%d", s.FastPeriod, s.SlowPeriod))
+	last := len(ans) - 1
+
+	output := input.Copy()
+	output.Floats[key] = ans[last]
+
+	return output
+}
+
 // +-----+
 // | BOP |
 // +-----+
@@ -65,6 +104,76 @@ func (s StatsAlgoBOP) Run(input AlgoContext, ticker Ticker) AlgoContext {
 
 	output := input.Copy()
 	output.Floats[key] = bop[last]
+
+	return output
+}
+
+// +-----+
+// | CMO |
+// +-----+
+
+type StatsAlgoCMO struct {
+	InTimePeriod int
+	Key          string
+	CandlesKey   string
+}
+
+func (s StatsAlgoCMO) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	if err != nil {
+		Msg(
+			log.Debug().
+				Err(err).
+				Int("want", s.InTimePeriod).
+				Int("have", input.CandlesLen(s.CandlesKey)),
+		)
+
+		return False
+	}
+
+	closes := Closes(candles)
+	ans := talib.Cmo(closes, s.InTimePeriod)
+
+	key := DefaultString(s.Key, fmt.Sprintf("cmo%d", s.InTimePeriod))
+	last := len(ans) - 1
+
+	output := input.Copy()
+	output.Floats[key] = ans[last]
+
+	return output
+}
+
+// +-----------+
+// | Price EMA |
+// +-----------+
+
+type StatsAlgoPriceEMA struct {
+	InTimePeriod int
+	Key          string
+	CandlesKey   string
+}
+
+func (s StatsAlgoPriceEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
+	candles, err := input.Candles(s.CandlesKey, s.InTimePeriod)
+	if err != nil {
+		Msg(
+			log.Debug().
+				Err(err).
+				Int("want", s.InTimePeriod).
+				Int("have", input.CandlesLen(s.CandlesKey)),
+		)
+
+		return False
+	}
+
+	closes := Closes(candles)
+	ans := talib.Ma(closes, s.InTimePeriod, talib.EMA)
+
+	key := DefaultString(s.Key, fmt.Sprintf("ema%d", s.InTimePeriod))
+	last := len(ans) - 1
+
+	output := input.Copy()
+	output.Floats[key] = ans[last]
 
 	return output
 }
