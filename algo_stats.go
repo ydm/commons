@@ -54,6 +54,8 @@ func (s StatsAlgoAD) Run(input AlgoContext, ticker Ticker) AlgoContext {
 		Msg(
 			log.Debug().
 				Err(err).
+				Str("key", s.Key).
+				Str("candlesKey", s.CandlesKey).
 				Int("want", s.SlowPeriod+1).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
@@ -124,6 +126,8 @@ func (s StatsAlgoCMO) Run(input AlgoContext, ticker Ticker) AlgoContext {
 		Msg(
 			log.Debug().
 				Err(err).
+				Str("key", s.Key).
+				Str("candlesKey", s.CandlesKey).
 				Int("want", s.InTimePeriod).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
@@ -159,6 +163,8 @@ func (s StatsAlgoPriceEMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
 		Msg(
 			log.Debug().
 				Err(err).
+				Str("key", s.Key).
+				Str("candlesKey", s.CandlesKey).
 				Int("want", s.InTimePeriod).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
@@ -194,6 +200,8 @@ func (s StatsAlgoPriceMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
 		Msg(
 			log.Debug().
 				Err(err).
+				Str("key", s.Key).
+				Str("candlesKey", s.CandlesKey).
 				Int("want", s.InTimePeriod).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
@@ -229,6 +237,8 @@ func (s StatsAlgoVolumeMA) Run(input AlgoContext, ticker Ticker) AlgoContext {
 		Msg(
 			log.Debug().
 				Err(err).
+				Str("key", s.Key).
+				Str("candlesKey", s.CandlesKey).
 				Int("want", s.InTimePeriod).
 				Int("have", input.CandlesLen(s.CandlesKey)),
 		)
