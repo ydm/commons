@@ -272,7 +272,7 @@ func (b *BinanceFutures) CancelOrder(symbol string, clientOrderID string) error 
 		OrigClientOrderID(clientOrderID)
 
 	resp, err := service.Do(context.Background())
-	if err != nil {
+	if err != nil && err.Error() != "<APIError> code=-2011, msg=Unknown order sent." {
 		return wrap(err, "cancel order failed")
 	}
 

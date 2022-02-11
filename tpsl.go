@@ -59,7 +59,7 @@ func TPSL(
 
 		err := exchange.CancelOrder(symbol, stopLossID)
 
-		if err != nil && err.Error() != "<APIError> code=-2011, msg=Unknown order sent." {
+		if err != nil {
 			What(
 				log.Warn().
 					Err(err).
@@ -82,7 +82,7 @@ func TPSL(
 
 		err := exchange.CancelOrder(symbol, takeProfitID)
 
-		if err != nil && err.Error() != "<APIError> code=-2011, msg=Unknown order sent." {
+		if err != nil {
 			What(
 				log.Warn().
 					Err(err).

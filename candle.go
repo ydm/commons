@@ -55,7 +55,7 @@ func NewCandleBuilder() CandleBuilder {
 }
 
 func (b *CandleBuilder) Push(t Ticker) {
-	if b.NumberOfTrades == 0 {
+	if b.NumberOfTrades <= 0 {
 		b.Open = t.TradePrice
 	}
 
@@ -79,30 +79,34 @@ func (b *CandleBuilder) Push(t Ticker) {
 	}
 }
 
-func (b *CandleBuilder) Clear() Candle {
+func (b *CandleBuilder) Clear() (candle Candle, err error) {
 	high, err := b.High.Value()
 	if err != nil {
-		panic(err)
+		return candle, err
 	}
 
 	low, err := b.Low.Value()
 	if err != nil {
-		panic(err)
+		return candle, err
 	}
 
-	candle := Candle{
-		Open:                     b.Open,
-		High:                     high,
-		Low:                      low,
-		Close:                    b.Close,
-		Volume:                   b.Volume,
-		VWAP:                     b.QuoteAssetVolume / b.Volume,
-		QuoteAssetVolume:         b.QuoteAssetVolume,
-		NumberOfTrades:           b.NumberOfTrades,
-		TakerBuyBaseAssetVolume:  b.TakerBuyBaseAssetVolume,
-		TakerBuyQuoteAssetVolume: b.TakerBuyQuoteAssetVolume,
-		CloseTime:                time.Now().UTC(),
+	// Populate return object.
+	candle.Open = b.Open
+	candle.High = high
+	candle.Low = low
+	candle.Close = b.Close
+	candle.Volume = b.Volume
+
+	candle.VWAP = 0
+	if b.Volume != 0 {
+		candle.VWAP = b.QuoteAssetVolume / b.Volume
 	}
+
+	candle.QuoteAssetVolume = b.QuoteAssetVolume
+	candle.NumberOfTrades = b.NumberOfTrades
+	candle.TakerBuyBaseAssetVolume = b.TakerBuyBaseAssetVolume
+	candle.TakerBuyQuoteAssetVolume = b.TakerBuyQuoteAssetVolume
+	candle.CloseTime = time.Now().UTC()
 
 	b.Open = 0
 	b.High.Clear()
@@ -114,7 +118,7 @@ func (b *CandleBuilder) Clear() Candle {
 	b.TakerBuyBaseAssetVolume = 0
 	b.TakerBuyQuoteAssetVolume = 0
 
-	return candle
+	return candle, err
 }
 
 // +-----------+
