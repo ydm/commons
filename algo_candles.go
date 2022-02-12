@@ -41,7 +41,10 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 
 		// Produce and publish candle.
 		if clear {
-			candle := a.builder.Clear()
+			candle, err := a.builder.Clear()
+			if err != nil {
+				return False
+			}
 
 			// Adjust times.
 			since := time.Since(a.last)

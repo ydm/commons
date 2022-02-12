@@ -146,7 +146,7 @@ func New(ctx context.Context, apikey, secret string) *BinanceFutures {
 		commons.What(log.Info().Int64("timeOffset", timeOffset), "initialized server time offset")
 	}
 
-	var streamer *Streamer = nil
+	var streamer *Streamer
 	if apikey != "" && secret != "" {
 		streamer = NewStreamer(NewFuturesStreamService(client))
 	}

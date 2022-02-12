@@ -1,6 +1,7 @@
 package commons
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/alexander-yu/stream/minmax"
@@ -82,12 +83,12 @@ func (b *CandleBuilder) Push(t Ticker) {
 func (b *CandleBuilder) Clear() (candle Candle, err error) {
 	high, err := b.High.Value()
 	if err != nil {
-		return candle, err
+		return candle, fmt.Errorf("high.Value() failed: %w", err)
 	}
 
 	low, err := b.Low.Value()
 	if err != nil {
-		return candle, err
+		return candle, fmt.Errorf("low.Value() failed: %w", err)
 	}
 
 	// Populate return object.
@@ -118,7 +119,7 @@ func (b *CandleBuilder) Clear() (candle Candle, err error) {
 	b.TakerBuyBaseAssetVolume = 0
 	b.TakerBuyQuoteAssetVolume = 0
 
-	return candle, err
+	return candle, nil
 }
 
 // +-----------+

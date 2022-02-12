@@ -1,6 +1,10 @@
 package commons
 
-import "github.com/rs/zerolog/log"
+import (
+	"strings"
+
+	"github.com/rs/zerolog/log"
+)
 
 func oppositeSide(side string) string {
 	switch side {
@@ -42,58 +46,53 @@ func TPSL(
 	stopLossPrice string,
 ) {
 	closeSide := oppositeSide(openSide)
-	takeProfitID := RandomOrderID("TP_")
-	stopLossID := RandomOrderID("SL_")
+	takeProfitID := RandomOrderID("P_")
+	stopLossID := RandomOrderID("L_")
+
+	handler := func(update OrderUpdate) {
+		if strings.EqualFold(update.Status, "filled") {
+			return
+		}
+
+		cancelID := ""
+
+		switch update.ClientOrderID {
+		case takeProfitID:
+			cancelID = stopLossID
+		case stopLossID:
+			cancelID = takeProfitID
+		}
+
+		What(
+			log.Info().
+				Bool("stopLossFilled", update.ClientOrderID == stopLossID).
+				Bool("takeProfitFilled", update.ClientOrderID == takeProfitID).
+				Interface("update", update).
+				Str("stopLossID", stopLossID).
+				Str("takeProfitID", takeProfitID).
+				Str("cancelID", cancelID),
+			"one TPSL order filled, canceling the other",
+		)
+
+		if cancelID != "" {
+			err := exchange.CancelOrder(symbol, cancelID)
+			if err != nil {
+				What(
+					log.Warn().
+						Err(err).
+						Str("symbol", symbol).
+						Str("stopLossID", stopLossID),
+					"failed to cancel stop_loss after take_profit got filled",
+				)
+			}
+		}
+	}
 
 	// First make sure we handle order filled events.
+	exchange.OnOrderUpdate(takeProfitID, handler)
+	exchange.OnOrderUpdate(stopLossID, handler)
 
-	exchange.OnOrderUpdate(takeProfitID, func(update OrderUpdate) {
-		if update.Status != "FILLED" {
-			return
-		}
-
-		What(
-			log.Info().Interface("update", update).Str("stopLossID", stopLossID),
-			"take_profit order filled, will now cancel stop_loss",
-		)
-
-		err := exchange.CancelOrder(symbol, stopLossID)
-
-		if err != nil {
-			What(
-				log.Warn().
-					Err(err).
-					Str("symbol", symbol).
-					Str("stopLossID", stopLossID),
-				"failed to cancel stop_loss after take_profit got filled",
-			)
-		}
-	})
-
-	exchange.OnOrderUpdate(stopLossID, func(update OrderUpdate) {
-		if update.Status != "FILLED" {
-			return
-		}
-
-		What(
-			log.Info().Interface("update", update).Str("takeProfitID", takeProfitID),
-			"stop_loss order filled, will now cancel take_profit",
-		)
-
-		err := exchange.CancelOrder(symbol, takeProfitID)
-
-		if err != nil {
-			What(
-				log.Warn().
-					Err(err).
-					Str("symbol", symbol).
-					Str("takeProfitID", takeProfitID),
-				"failed to cancel take_profit after stop_loss got filled",
-			)
-		}
-	})
-
-	// Next, create two new orders simultaneously.
+	// Second, create two orders simultaneously.
 	go create(exchange, symbol, closeSide, "stop_market", stopLossPrice, quantityStr, stopLossID)
 	create(exchange, symbol, closeSide, "limit", takeProfitPrice, quantityStr, takeProfitID)
 }
