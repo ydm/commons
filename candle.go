@@ -12,6 +12,7 @@ import (
 // +--------+
 
 type Candle struct {
+	Symbol                   string
 	Open                     float64
 	High                     float64
 	Low                      float64

@@ -17,9 +17,10 @@ type CandlesAlgo struct {
 	predicate Predicate
 	last      time.Time
 	key       string
+	symbol    string
 }
 
-func NewCandlesAlgo(predicate Predicate, key string) *CandlesAlgo {
+func NewCandlesAlgo(predicate Predicate, key string, symbol string) *CandlesAlgo {
 	key = DefaultString(key, "candles")
 
 	return &CandlesAlgo{
@@ -28,11 +29,12 @@ func NewCandlesAlgo(predicate Predicate, key string) *CandlesAlgo {
 		predicate: predicate,
 		last:      time.Now().UTC(),
 		key:       key,
+		symbol:    symbol,
 	}
 }
 
 func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
-	if ticker.Last == TradeUpdate {
+	if (a.symbol == "" || a.symbol == ticker.Symbol) && ticker.Last == TradeUpdate {
 		a.builder.Push(ticker)
 
 		// Indicates whether we should produce a new candle
@@ -45,6 +47,9 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 			if err != nil {
 				return False
 			}
+
+			// Assign symbol.
+			candle.Symbol = ticker.Symbol
 
 			// Adjust times.
 			since := time.Since(a.last)
@@ -71,34 +76,34 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 // | Tick candles |
 // +--------------+
 
-func NewTickCandlesAlgo(numTicks int, key string) *CandlesAlgo {
+func NewTickCandlesAlgo(numTicks int, key string, symbol string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.NumberOfTrades >= numTicks
 	}
 
-	return NewCandlesAlgo(predicate, key)
+	return NewCandlesAlgo(predicate, key, symbol)
 }
 
 // +----------------+
 // | Volume candles |
 // +----------------+
 
-func NewVolumeCandlesAlgo(volumeThreshold float64, key string) *CandlesAlgo {
+func NewVolumeCandlesAlgo(volumeThreshold float64, key string, symbol string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.Volume >= volumeThreshold
 	}
 
-	return NewCandlesAlgo(predicate, key)
+	return NewCandlesAlgo(predicate, key, symbol)
 }
 
 // +-----------+
 // | $ candles |
 // +-----------+
 
-func NewDollarCandlesAlgo(threshold float64, key string) *CandlesAlgo {
+func NewDollarCandlesAlgo(threshold float64, key string, symbol string) *CandlesAlgo {
 	predicate := func(b *CandleBuilder) bool {
 		return b.QuoteAssetVolume >= threshold
 	}
 
-	return NewCandlesAlgo(predicate, key)
+	return NewCandlesAlgo(predicate, key, symbol)
 }
