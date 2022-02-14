@@ -6,11 +6,11 @@ type Parallel struct {
 
 func (p *Parallel) Run(input AlgoContext, ticker Ticker) (output AlgoContext) {
 	for i := range p.algos {
-		go func(algo Algo, copied AlgoContext) {
+		go func(algo Algo, copy AlgoContext) {
 			Checker.Push()
 			defer Checker.Pop()
 
-			algo.Run(copied, ticker)
+			algo.Run(copy, ticker)
 		}(p.algos[i], input.Copy())
 	}
 
