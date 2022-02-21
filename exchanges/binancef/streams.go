@@ -10,12 +10,13 @@ import (
 )
 
 type Trade struct {
-	Time      time.Time
-	Symbol    string
-	Price     float64
-	Quantity  float64
-	TradeTime time.Time
-	Maker     bool // Whether buyer is maker.
+	LastTradeID int64
+	Time        time.Time
+	Symbol      string
+	Price       float64
+	Quantity    float64
+	TradeTime   time.Time
+	Maker       bool // Whether buyer is maker.
 }
 
 type BookTicker struct {
@@ -28,7 +29,7 @@ type BookTicker struct {
 	BestAskQty      float64
 }
 
-func SubscribeAggTrade(ctx context.Context, symbol string) chan commons.Trade {
+func SubscribeAggTrade(ctx context.Context, symbol string) <-chan commons.Trade {
 	c := make(chan commons.Trade)
 
 	done, stop, err := futures.WsAggTradeServe(
@@ -46,6 +47,7 @@ func SubscribeAggTrade(ctx context.Context, symbol string) chan commons.Trade {
 			}
 
 			c <- commons.Trade{
+				TradeID:      x.LastTradeID,
 				Time:         x.Time,
 				Symbol:       x.Symbol,
 				Price:        x.Price,
@@ -82,7 +84,7 @@ func SubscribeAggTrade(ctx context.Context, symbol string) chan commons.Trade {
 	return c
 }
 
-func SubscribeBookTicker(ctx context.Context, symbol string) chan commons.Book1 {
+func SubscribeBookTicker(ctx context.Context, symbol string) <-chan commons.Book1 {
 	c := make(chan commons.Book1)
 
 	done, stop, err := futures.WsBookTickerServe(

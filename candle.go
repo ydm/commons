@@ -23,7 +23,9 @@ type Candle struct {
 	NumberOfTrades           int
 	TakerBuyBaseAssetVolume  float64
 	TakerBuyQuoteAssetVolume float64
+	OpenTime                 time.Time
 	CloseTime                time.Time
+	LastTradeID              int64
 }
 
 // +---------------+
@@ -40,10 +42,13 @@ type CandleBuilder struct {
 	NumberOfTrades           int
 	TakerBuyBaseAssetVolume  float64
 	TakerBuyQuoteAssetVolume float64
+	OpenTime                 time.Time
+	CloseTime                time.Time
+	LastTradeID              int64
 }
 
-func NewCandleBuilder() CandleBuilder {
-	return CandleBuilder{
+func NewCandleBuilder() *CandleBuilder {
+	builder := &CandleBuilder{
 		Open:                     0,
 		High:                     *minmax.NewGlobalMax(),
 		Low:                      *minmax.NewGlobalMin(),
@@ -53,12 +58,19 @@ func NewCandleBuilder() CandleBuilder {
 		NumberOfTrades:           0,
 		TakerBuyBaseAssetVolume:  0,
 		TakerBuyQuoteAssetVolume: 0,
+		OpenTime:                 time.Time{},
+		CloseTime:                time.Time{},
+		LastTradeID:              0,
 	}
+	builder.reset()
+
+	return builder
 }
 
 func (b *CandleBuilder) Push(t Ticker) {
 	if b.NumberOfTrades <= 0 {
 		b.Open = t.TradePrice
+		b.OpenTime = t.Time
 	}
 
 	if err := b.High.Push(t.TradePrice); err != nil {
@@ -74,6 +86,8 @@ func (b *CandleBuilder) Push(t Ticker) {
 	quoteAssetVolume := t.TradePrice * t.TradeQuantity
 	b.QuoteAssetVolume += quoteAssetVolume
 	b.NumberOfTrades++
+	b.CloseTime = t.Time
+	b.LastTradeID = t.TradeID
 
 	if !t.BuyerIsMaker {
 		b.TakerBuyBaseAssetVolume += t.TradeQuantity
@@ -108,8 +122,17 @@ func (b *CandleBuilder) Clear() (candle Candle, err error) {
 	candle.NumberOfTrades = b.NumberOfTrades
 	candle.TakerBuyBaseAssetVolume = b.TakerBuyBaseAssetVolume
 	candle.TakerBuyQuoteAssetVolume = b.TakerBuyQuoteAssetVolume
-	candle.CloseTime = time.Now().UTC()
+	candle.OpenTime = b.OpenTime.UTC()
+	candle.CloseTime = b.CloseTime.UTC()
+	candle.LastTradeID = b.LastTradeID
 
+	// After all the data is snapped, reset object.
+	b.reset()
+
+	return candle, nil
+}
+
+func (b *CandleBuilder) reset() {
 	b.Open = 0
 	b.High.Clear()
 	b.Low.Clear()
@@ -119,8 +142,9 @@ func (b *CandleBuilder) Clear() (candle Candle, err error) {
 	b.NumberOfTrades = 0
 	b.TakerBuyBaseAssetVolume = 0
 	b.TakerBuyQuoteAssetVolume = 0
-
-	return candle, nil
+	b.OpenTime = time.Time{}
+	b.CloseTime = time.Time{}
+	b.LastTradeID = 0
 }
 
 // +-----------+

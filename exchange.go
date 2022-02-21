@@ -6,6 +6,7 @@ import (
 )
 
 type Trade struct {
+	TradeID  int64
 	Time     time.Time
 	Symbol   string
 	Price    float64
@@ -64,8 +65,8 @@ type Exchange interface {
 	ChangeLeverage(symbol string, leverage int) error
 
 	// [2] Streams.
-	Book1(ctx context.Context, symbol string) chan Book1
-	Trade(ctx context.Context, symbol string) chan Trade
+	Book1(ctx context.Context, symbol string) <-chan Book1
+	Trade(ctx context.Context, symbol string) <-chan Trade
 
 	// [3] Events.
 	OnOrderUpdate(clientOrderID string, callback OrderUpdateCallback)

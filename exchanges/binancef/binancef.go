@@ -328,11 +328,11 @@ func (b *BinanceFutures) ChangeLeverage(symbol string, leverage int) error {
 // | Websocket |
 // +-----------+
 
-func (b *BinanceFutures) Book1(ctx context.Context, symbol string) chan commons.Book1 {
+func (b *BinanceFutures) Book1(ctx context.Context, symbol string) <-chan commons.Book1 {
 	return SubscribeBookTicker(ctx, symbol)
 }
 
-func (b *BinanceFutures) Trade(ctx context.Context, symbol string) chan commons.Trade {
+func (b *BinanceFutures) Trade(ctx context.Context, symbol string) <-chan commons.Trade {
 	return SubscribeAggTrade(ctx, symbol)
 }
 

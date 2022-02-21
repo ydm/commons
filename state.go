@@ -5,64 +5,6 @@ import (
 	"time"
 )
 
-// +--------+
-// | Ticker |
-// +--------+
-
-const (
-	TradeUpdate = iota + 1
-	Book1Update
-)
-
-// Ticker holds all the relevant data for a single trading pair.
-type Ticker struct {
-	Now    time.Time
-	Symbol string
-
-	// Trade data.
-	TradePrice    float64
-	TradeQuantity float64
-	BuyerIsMaker  bool
-
-	// Order book level 1 data.
-	BidPrice    float64
-	BidQuantity float64
-	AskPrice    float64
-	AskQuantity float64
-
-	// Type of the last update unit.
-	Last int
-}
-
-func (s *Ticker) ApplyTrade(x Trade) Ticker {
-	if s.Symbol != x.Symbol {
-		panic(x.Symbol)
-	}
-
-	s.Now = x.Time
-	s.TradePrice = x.Price
-	s.TradeQuantity = x.Quantity
-	s.BuyerIsMaker = x.BuyerIsMaker
-	s.Last = TradeUpdate
-
-	return *s
-}
-
-func (s *Ticker) ApplyBook1(x Book1) Ticker {
-	if s.Symbol != x.Symbol {
-		panic(x.Symbol)
-	}
-
-	s.Now = x.Time
-	s.AskPrice = x.AskPrice
-	s.AskQuantity = x.AskQuantity
-	s.BidPrice = x.BidPrice
-	s.BidQuantity = x.BidQuantity
-	s.Last = Book1Update
-
-	return *s
-}
-
 // +-------+
 // | State |
 // +-------+
@@ -128,7 +70,8 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	for _, s := range symbols {
 		k.state.Tickers[s] = &Ticker{
 			Symbol:        s,
-			Now:           time.Time{},
+			Time:          time.Time{},
+			TradeID:       0,
 			TradePrice:    0,
 			TradeQuantity: 0,
 			BuyerIsMaker:  false,
@@ -144,7 +87,7 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	return k
 }
 
-func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
+func (k *StateKeeper) ConsumeTrade(xs <-chan Trade) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()
@@ -161,7 +104,7 @@ func (k *StateKeeper) ConsumeTrade(xs chan Trade) {
 	}()
 }
 
-func (k *StateKeeper) ConsumeBook1(xs chan Book1) {
+func (k *StateKeeper) ConsumeBook1(xs <-chan Book1) {
 	go func() {
 		Checker.Push()
 		defer Checker.Pop()

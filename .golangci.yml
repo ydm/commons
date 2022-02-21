@@ -10,3 +10,4 @@ linters:
     - gomnd                     # Fucking annoying.
     - gomoddirectives           # Fucking annoying.
     - varnamelen                # Fucking annoying.
+    - wsl                       # Fuck you too!
