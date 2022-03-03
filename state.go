@@ -3,6 +3,8 @@ package commons
 import (
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // +-------+
@@ -95,7 +97,13 @@ func (k *StateKeeper) ConsumeTrade(xs <-chan Trade) {
 		defer k.waitGroup.Done()
 
 		for x := range xs {
-			m := k.locks[x.Symbol]
+			m, ok := k.locks[x.Symbol]
+			if !ok {
+				What(log.Warn().Str("symbol", x.Symbol).Interface("trade", x), "unrecognized symbol")
+
+				continue
+			}
+
 			m.Lock()
 			ticker := k.state.ApplyTrade(x)
 			m.Unlock()
