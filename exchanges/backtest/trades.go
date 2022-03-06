@@ -1,17 +1,14 @@
 package backtest
 
 import (
+	"strings"
+
 	"github.com/ydm/commons"
 )
 
-// func SymbolFromFilename(filename string) string {
-// 	split := strings.SplitN(filename, "-", 2)
-// 	if len(split) != 2 {
-// 		panic("")
-// 	}
-
-// 	return split[0]
-// }
+func originMatches(origin, symbol string) bool {
+	return strings.HasPrefix(origin, symbol)
+}
 
 func ReadTrades(archives []string, symbol string) <-chan commons.Trade {
 	trades := make(chan commons.Trade)
@@ -24,9 +21,10 @@ func ReadTrades(archives []string, symbol string) <-chan commons.Trade {
 
 		for _, archive := range archives {
 			for row := range ReadCSVZipArchive(archive) {
-				// symbol := SymbolFromFilename(row.Origin)
-				trade := commons.TradeFromStrings(symbol, row.Values)
-				trades <- trade
+				if originMatches(row.Origin, symbol) {
+					trade := commons.TradeFromStrings(symbol, row.Values)
+					trades <- trade
+				}
 			}
 		}
 	}()

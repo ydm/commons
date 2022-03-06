@@ -89,42 +89,34 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 	return k
 }
 
+// ConsumeTrade is usually called in a goroutine.
 func (k *StateKeeper) ConsumeTrade(xs <-chan Trade) {
-	go func() {
-		Checker.Push()
-		defer Checker.Pop()
+	defer k.waitGroup.Done()
 
-		defer k.waitGroup.Done()
+	for x := range xs {
+		m, ok := k.locks[x.Symbol]
+		if !ok {
+			What(log.Warn().Str("symbol", x.Symbol).Interface("trade", x), "unrecognized symbol")
 
-		for x := range xs {
-			m, ok := k.locks[x.Symbol]
-			if !ok {
-				What(log.Warn().Str("symbol", x.Symbol).Interface("trade", x), "unrecognized symbol")
-
-				continue
-			}
-
-			m.Lock()
-			ticker := k.state.ApplyTrade(x)
-			m.Unlock()
-			k.Channel <- ticker
+			continue
 		}
-	}()
+
+		m.Lock()
+		ticker := k.state.ApplyTrade(x)
+		m.Unlock()
+		k.Channel <- ticker
+	}
 }
 
+// ConsumeBook1 is usually called in a goroutine.
 func (k *StateKeeper) ConsumeBook1(xs <-chan Book1) {
-	go func() {
-		Checker.Push()
-		defer Checker.Pop()
+	defer k.waitGroup.Done()
 
-		defer k.waitGroup.Done()
-
-		for x := range xs {
-			m := k.locks[x.Symbol]
-			m.Lock()
-			ticker := k.state.ApplyBook1(x)
-			m.Unlock()
-			k.Channel <- ticker
-		}
-	}()
+	for x := range xs {
+		m := k.locks[x.Symbol]
+		m.Lock()
+		ticker := k.state.ApplyBook1(x)
+		m.Unlock()
+		k.Channel <- ticker
+	}
 }
