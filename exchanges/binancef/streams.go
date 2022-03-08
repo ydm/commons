@@ -56,6 +56,7 @@ func SubscribeAggTrade(ctx context.Context, symbol string) <-chan commons.Trade 
 			}
 		},
 		func(err error) {
+			commons.What(log.Warn().Err(err), "WsAggTradeServe failed")
 			panic(err)
 		},
 	)
