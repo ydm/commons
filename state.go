@@ -3,8 +3,6 @@ package commons
 import (
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 // +-------+
@@ -14,15 +12,22 @@ import (
 type State struct {
 	Now     time.Time
 	Tickers map[string]*Ticker
+	lock    sync.Mutex
 }
 
 func (s *State) ApplyTrade(x Trade) Ticker {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.Now = x.Time
 
 	return s.Tickers[x.Symbol].ApplyTrade(x)
 }
 
 func (s *State) ApplyBook1(x Book1) Ticker {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.Now = x.Time
 
 	return s.Tickers[x.Symbol].ApplyBook1(x)
@@ -33,11 +38,10 @@ func (s *State) ApplyBook1(x Book1) Ticker {
 // +-------------+
 
 type StateKeeper struct {
-	// We yield a new State through this channel after each
-	// update.
+	// We yield a new Ticker, representing the current state,
+	// through this channel after each update.
 	Channel   chan Ticker
 	state     State
-	locks     map[string]*sync.Mutex
 	waitGroup sync.WaitGroup
 }
 
@@ -49,7 +53,6 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 			Now:     time.Time{},
 			Tickers: make(map[string]*Ticker),
 		},
-		locks:     make(map[string]*sync.Mutex),
 		waitGroup: sync.WaitGroup{},
 	}
 
@@ -83,7 +86,6 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 			AskQuantity:   0,
 			Last:          0,
 		}
-		k.locks[s] = &sync.Mutex{}
 	}
 
 	return k
@@ -94,16 +96,7 @@ func (k *StateKeeper) ConsumeTrade(xs <-chan Trade) {
 	defer k.waitGroup.Done()
 
 	for x := range xs {
-		m, ok := k.locks[x.Symbol]
-		if !ok {
-			What(log.Warn().Str("symbol", x.Symbol).Interface("trade", x), "unrecognized symbol")
-
-			continue
-		}
-
-		m.Lock()
 		ticker := k.state.ApplyTrade(x)
-		m.Unlock()
 		k.Channel <- ticker
 	}
 }
@@ -113,10 +106,7 @@ func (k *StateKeeper) ConsumeBook1(xs <-chan Book1) {
 	defer k.waitGroup.Done()
 
 	for x := range xs {
-		m := k.locks[x.Symbol]
-		m.Lock()
 		ticker := k.state.ApplyBook1(x)
-		m.Unlock()
 		k.Channel <- ticker
 	}
 }
