@@ -11,23 +11,25 @@ type Predicate func(*CandleBuilder) bool
 
 type CandlesAlgo struct {
 	Candles      CircularArray
-	builder      *CandleBuilder
-	predicate    Predicate
-	key          string
-	symbol       string
 	afterTradeID int64
+	builder      *CandleBuilder
+	candleType   int
+	key          string
+	predicate    Predicate
+	symbol       string
 }
 
-func NewCandlesAlgo(predicate Predicate, key string, symbol string, afterTradeID int64) *CandlesAlgo {
+func NewCandlesAlgo(afterTradeID int64, candleType int, key string, predicate Predicate, symbol string) *CandlesAlgo {
 	key = DefaultString(key, "candles")
 
 	return &CandlesAlgo{
 		Candles:      NewCircularArray(256),
-		builder:      NewCandleBuilder(),
-		predicate:    predicate,
-		key:          key,
-		symbol:       symbol,
 		afterTradeID: afterTradeID,
+		builder:      NewCandleBuilder(),
+		candleType:   candleType,
+		key:          key,
+		predicate:    predicate,
+		symbol:       symbol,
 	}
 }
 
@@ -55,12 +57,13 @@ func (a *CandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 
 	// Produce and publish candle.
 	if clear {
-		candle, err := a.builder.Clear()
+		candle, err := a.builder.Seal()
 		if err != nil {
 			return False
 		}
 
-		// Assign symbol.
+		// Assign extra attributes.
+		candle.Type = a.candleType
 		candle.Symbol = ticker.Symbol
 
 		// Add to array.
@@ -85,7 +88,7 @@ func NewTickCandlesAlgo(numTicks int, key string, symbol string, afterTradeID in
 		return b.NumberOfTrades >= numTicks
 	}
 
-	return NewCandlesAlgo(predicate, key, symbol, afterTradeID)
+	return NewCandlesAlgo(afterTradeID, TickCandle, key, predicate, symbol)
 }
 
 // +----------------+
@@ -97,7 +100,7 @@ func NewVolumeCandlesAlgo(volumeThreshold float64, key string, symbol string, af
 		return b.Volume >= volumeThreshold
 	}
 
-	return NewCandlesAlgo(predicate, key, symbol, afterTradeID)
+	return NewCandlesAlgo(afterTradeID, VolumeCandle, key, predicate, symbol)
 }
 
 // +-----------+
@@ -109,7 +112,7 @@ func NewDollarCandlesAlgo(threshold float64, key string, symbol string, afterTra
 		return b.QuoteAssetVolume >= threshold
 	}
 
-	return NewCandlesAlgo(predicate, key, symbol, afterTradeID)
+	return NewCandlesAlgo(afterTradeID, DollarCandle, key, predicate, symbol)
 }
 
 // +--------------+
@@ -118,25 +121,25 @@ func NewDollarCandlesAlgo(threshold float64, key string, symbol string, afterTra
 
 type TimeCandlesAlgo struct {
 	Candles         CircularArray
+	afterTradeID    int64
 	builder         *CandleBuilder
 	duration        time.Duration
+	key             string
 	lastAlignedTime time.Time
 	lastTradeTime   time.Time
-	key             string
 	symbol          string
-	afterTradeID    int64
 }
 
 func NewTimeCandlesAlgo(dur time.Duration, key string, symbol string, afterTradeID int64) *TimeCandlesAlgo {
 	return &TimeCandlesAlgo{
 		Candles:         NewCircularArray(256),
+		afterTradeID:    afterTradeID,
 		builder:         NewCandleBuilder(),
 		duration:        dur,
+		key:             key,
 		lastAlignedTime: time.Time{},
 		lastTradeTime:   time.Time{},
-		key:             key,
 		symbol:          symbol,
-		afterTradeID:    afterTradeID,
 	}
 }
 
@@ -181,12 +184,13 @@ func (a *TimeCandlesAlgo) Run(input AlgoContext, ticker Ticker) AlgoContext {
 
 	// Produce and publish candle.
 	if clear {
-		candle, err := a.builder.Clear()
+		candle, err := a.builder.Seal()
 		if err != nil {
 			return False
 		}
 
 		// Assign symbol.
+		candle.Type = TimeCandle
 		candle.Symbol = ticker.Symbol
 
 		// Add to array.

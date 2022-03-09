@@ -11,7 +11,25 @@ import (
 // | Candle |
 // +--------+
 
+// NB: These constants should be aligned with baser/constants.py.
+const (
+	DollarCandle = iota + 1
+	TickCandle
+	TimeCandle
+	VolumeCandle
+)
+
+// NB: These constants should be aligned with baser/constants.py.
+const (
+	BTCUSDT = iota + 1
+	ETHUSDT
+	BCHUSDT
+	LINKUSDT
+	LTCUSDT
+)
+
 type Candle struct {
+	Type                     int
 	Symbol                   string
 	Open                     float64
 	High                     float64
@@ -26,6 +44,20 @@ type Candle struct {
 	OpenTime                 time.Time
 	CloseTime                time.Time
 	LastTradeID              int64
+}
+
+func (c *Candle) TypeSymbol() string {
+	prefix := "_"
+	switch c.Type {
+	case DollarCandle:
+		prefix = "d"
+	case TickCandle:
+		prefix = "k"
+	case VolumeCandle:
+		prefix = "v"
+	}
+
+	return prefix + c.Symbol
 }
 
 // +---------------+
@@ -95,7 +127,7 @@ func (b *CandleBuilder) Push(t Ticker) {
 	}
 }
 
-func (b *CandleBuilder) Clear() (candle Candle, err error) {
+func (b *CandleBuilder) Seal() (candle Candle, err error) {
 	high, err := b.High.Value()
 	if err != nil {
 		return candle, fmt.Errorf("high.Value() failed: %w", err)
