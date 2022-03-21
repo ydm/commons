@@ -23,6 +23,7 @@ func DefaultString(x, defaultValue string) string {
 func AlignTime(t time.Time, interval time.Duration) time.Time {
 	uni := t.Unix()
 	sec := int64(interval.Seconds())
+
 	return time.Unix(uni-uni%sec, 0).UTC()
 }
 

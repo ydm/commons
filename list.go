@@ -10,23 +10,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func ListFiles(input, prefix, suffix string) []string {
-	check := func(file fs.FileInfo) bool {
-		if file.IsDir() {
-			return false
-		}
-
-		if prefix != "" && !strings.HasPrefix(file.Name(), prefix) {
-			return false
-		}
-
-		if suffix != "" && !strings.HasSuffix(file.Name(), suffix) {
-			return false
-		}
-
-		return true
+func checkFile(file fs.FileInfo, prefix, suffix string) bool {
+	if file.IsDir() {
+		return false
 	}
 
+	if prefix != "" && !strings.HasPrefix(file.Name(), prefix) {
+		return false
+	}
+
+	if suffix != "" && !strings.HasSuffix(file.Name(), suffix) {
+		return false
+	}
+
+	return true
+}
+
+func ListFiles(input, prefix, suffix string) []string {
 	// Create result.
 	ans := make([]string, 0, 16)
 
@@ -38,22 +38,23 @@ func ListFiles(input, prefix, suffix string) []string {
 		return ans
 	}
 
-	if !file.IsDir() && check(file) {
+	if !file.IsDir() && checkFile(file, prefix, suffix) {
 		ans = append(ans, input)
 
 		return ans
 	}
 
 	// Iterate over all directories recursively and filter files of interest.
-	head := ""
-	dirs := []string{input}
 
+	dirs := []string{input}
 	for len(dirs) > 0 {
-		head, dirs = dirs[0], dirs[1:]
+		head := dirs[0]
+		dirs = dirs[1:]
 
 		files, err := ioutil.ReadDir(head)
 		if err != nil {
 			Msg(log.Warn().Err(err))
+
 			continue
 		}
 
@@ -64,7 +65,7 @@ func ListFiles(input, prefix, suffix string) []string {
 				dirs = append(dirs, path)
 			}
 
-			if check(file) {
+			if checkFile(file, prefix, suffix) {
 				ans = append(ans, path)
 			}
 		}

@@ -52,6 +52,7 @@ func NewStateKeeper(numChannels int, symbols ...string) *StateKeeper {
 		state: State{
 			Now:     time.Time{},
 			Tickers: make(map[string]*Ticker),
+			lock:    sync.Mutex{},
 		},
 		waitGroup: sync.WaitGroup{},
 	}

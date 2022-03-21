@@ -19,10 +19,12 @@ func NewProfiler(filename string) Profiler {
 	if err != nil {
 		panic(err)
 	}
+
 	err = pprof.StartCPUProfile(f)
 	if err != nil {
 		panic(err)
 	}
+
 	return p
 }
 

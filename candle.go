@@ -11,6 +11,8 @@ import (
 // | Candle |
 // +--------+
 
+// Candle types
+//
 // NB: These constants should be aligned with baser/constants.py.
 const (
 	DollarCandle = iota + 1
@@ -19,6 +21,8 @@ const (
 	VolumeCandle
 )
 
+// Candle symbols
+//
 // NB: These constants should be aligned with baser/constants.py.
 const (
 	BTCUSDT = iota + 1
