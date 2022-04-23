@@ -15,7 +15,7 @@ func copyStringField(inputFieldName string, inputField, outputField reflect.Valu
 	// field and assign.
 	outputKind := outputField.Kind()
 	if outputKind == reflect.Float32 || outputKind == reflect.Float64 {
-		x, err := strconv.ParseFloat(inputField.String(), 64) //nolint:gomnd
+		x, err := strconv.ParseFloat(inputField.String(), 64)
 		if err != nil {
 			return fmt.Errorf("field %s: %w", inputFieldName, err)
 		}

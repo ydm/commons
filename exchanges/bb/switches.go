@@ -1,4 +1,4 @@
-package binancef
+package bb
 
 // func switchSideFloat64(side string, buy, sell float64) float64 {
 // 	switch side {
@@ -11,7 +11,7 @@ package binancef
 // 	}
 // }
 
-func switchSideString(side string, buy, sell string) string {
+func SwitchSideString(side string, buy, sell string) string {
 	switch side {
 	case "buy":
 		return buy
@@ -22,20 +22,20 @@ func switchSideString(side string, buy, sell string) string {
 	}
 }
 
-func switchTypeString(orderType, market, limit, stopMarket string) string {
+func SwitchTypeString(orderType, market, limit, stopMarket string) string {
 	switch orderType {
-	case orderTypeMarket:
+	case OrderTypeMarket:
 		return market
-	case orderTypeLimit:
+	case OrderTypeLimit:
 		return limit
-	case orderTypeStopMarket:
+	case OrderTypeStopMarket:
 		return stopMarket
 	}
 
 	panic(orderType)
 }
 
-func switchMarginTypeString(marginType, crossed, isolated string) string {
+func SwitchMarginTypeString(marginType, crossed, isolated string) string {
 	switch marginType {
 	case "crossed":
 		return crossed

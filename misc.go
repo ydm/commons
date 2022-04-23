@@ -21,32 +21,32 @@ func Location() string {
 	}
 
 	fn := runtime.FuncForPC(pc)
-	xs := strings.SplitAfterN(fn.Name(), "/", 3) // nolint: gomnd
+	xs := strings.SplitAfterN(fn.Name(), "/", 3)
 
 	return xs[len(xs)-1]
 }
 
 // Location2 returns the name of the caller of the caller function.
 func Location2() string {
-	pc, _, _, ok := runtime.Caller(2) // nolint:gomnd
+	pc, _, _, ok := runtime.Caller(2)
 	if !ok {
 		return "?"
 	}
 
 	fn := runtime.FuncForPC(pc)
-	xs := strings.SplitAfterN(fn.Name(), "/", 3) // nolint: gomnd
+	xs := strings.SplitAfterN(fn.Name(), "/", 3)
 
 	return xs[len(xs)-1]
 }
 
 func Location3() string {
-	pc, _, _, ok := runtime.Caller(3) // nolint:gomnd
+	pc, _, _, ok := runtime.Caller(3)
 	if !ok {
 		return "?"
 	}
 
 	fn := runtime.FuncForPC(pc)
-	xs := strings.SplitAfterN(fn.Name(), "/", 3) // nolint: gomnd
+	xs := strings.SplitAfterN(fn.Name(), "/", 3)
 
 	return xs[len(xs)-1]
 }

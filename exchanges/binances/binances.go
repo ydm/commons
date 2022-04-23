@@ -1,13 +1,12 @@
-package binancef
+package binances
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 
-	"github.com/adshao/go-binance/v2/futures"
+	"github.com/adshao/go-binance/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/ydm/commons"
 	"github.com/ydm/commons/exchanges/bb"
@@ -17,17 +16,20 @@ import (
 // | BinanceFutures |
 // +----------------+
 
-var ErrLeverageNotSet = errors.New("leverage not set")
+var (
+	ErrLeverageNotSet = errors.New("leverage not set")
+	ErrNotImplemented = errors.New("not implemented")
+)
 
-type BinanceFutures struct {
-	client               *futures.Client
+type BinanceSpot struct {
+	client               *binance.Client
 	streamer             *bb.Streamer
 	orderUpdateCallbacks commons.CircularArray
 	orderUpdateMutex     sync.Mutex
 }
 
-func New(ctx context.Context, apikey, secret string) *BinanceFutures {
-	client := futures.NewClient(apikey, secret)
+func New(ctx context.Context, apikey, secret string) *BinanceSpot {
+	client := binance.NewClient(apikey, secret)
 
 	// Synchronize with server by adjusting an internal time offset.
 	service := client.NewSetServerTimeService()
@@ -41,10 +43,10 @@ func New(ctx context.Context, apikey, secret string) *BinanceFutures {
 
 	var streamer *bb.Streamer
 	if apikey != "" && secret != "" {
-		streamer = bb.NewStreamer(bb.NewFuturesStreamService(client))
+		streamer = bb.NewStreamer(bb.NewSpotStreamService(client))
 	}
 
-	ans := &BinanceFutures{
+	ans := &BinanceSpot{
 		client:               client,
 		streamer:             streamer,
 		orderUpdateCallbacks: commons.NewCircularArray(256),
@@ -71,29 +73,29 @@ func New(ctx context.Context, apikey, secret string) *BinanceFutures {
 // | REST API |
 // +----------+
 
-func binanceSide(side string) futures.SideType {
-	return futures.SideType(
+func binanceSide(side string) binance.SideType {
+	return binance.SideType(
 		bb.SwitchSideString(
 			side,
-			string(futures.SideTypeBuy),
-			string(futures.SideTypeSell),
+			string(binance.SideTypeBuy),
+			string(binance.SideTypeSell),
 		),
 	)
 }
 
-func binanceOrderType(orderType string) futures.OrderType {
-	return futures.OrderType(
+func binanceOrderType(orderType string) binance.OrderType {
+	return binance.OrderType(
 		bb.SwitchTypeString(
 			orderType,
-			string(futures.OrderTypeMarket),
-			string(futures.OrderTypeLimit),
-			string(futures.OrderTypeStopMarket),
+			string(binance.OrderTypeMarket),
+			string(binance.OrderTypeLimit),
+			string(binance.OrderTypeStopLoss), // TODO: Is this stop market?
 		),
 	)
 }
 
 //nolint:funlen
-func (b *BinanceFutures) CreateOrder(
+func (b *BinanceSpot) CreateOrder(
 	symbol string,
 	side string,
 	orderType string,
@@ -108,21 +110,15 @@ func (b *BinanceFutures) CreateOrder(
 	service := b.client.NewCreateOrderService().
 		Symbol(symbol).
 		Side(futuresSide).
-		PositionSide(futures.PositionSideTypeBoth).
 		Type(futuresOrderType).
-		// TimeInForce(futures.TimeInForceTypeFOK).
+		// TimeInForce(binance.TimeInForceTypeFOK).
 		Quantity(quantityStr).
-		ReduceOnly(reduceOnly).
+		// QuoteOrderQty
 		// Price
 		// NewClientOrderID(clientOrderID).
-		// StopPrice
-		// WorkingType
-		WorkingType(futures.WorkingTypeMarkPrice).
-		// ActivationPrice
-		// CallbackRate (TODO)
-		PriceProtect(true).
-		NewOrderResponseType(futures.NewOrderRespTypeRESULT)
-	//     ClosePosition(false)
+		// StopPrice(stopPrice)
+		// IcebergQuantity(icebergQuantity)
+		NewOrderRespType(binance.NewOrderRespTypeRESULT)
 
 	if clientOrderID != "" {
 		service = service.NewClientOrderID(clientOrderID)
@@ -131,11 +127,11 @@ func (b *BinanceFutures) CreateOrder(
 	switch orderType {
 	case bb.OrderTypeLimit:
 		service = service.
-			TimeInForce(futures.TimeInForceTypeGTC).
+			TimeInForce(binance.TimeInForceTypeGTC).
 			Price(priceStr)
 	case bb.OrderTypeStopMarket:
 		service = service.
-			TimeInForce(futures.TimeInForceTypeGTC).
+			TimeInForce(binance.TimeInForceTypeGTC).
 			StopPrice(priceStr)
 	}
 
@@ -155,11 +151,11 @@ func (b *BinanceFutures) CreateOrder(
 		OrderID:          strconv.FormatInt(res.OrderID, 10),
 		ClientOrderID:    res.ClientOrderID,
 		ExecutedQuantity: res.ExecutedQuantity,
-		AvgPrice:         res.AvgPrice,
+		AvgPrice:         res.Price, // TODO: Check if this field contains the average price.
 	}, nil
 }
 
-func (b *BinanceFutures) CancelOrder(symbol string, clientOrderID string) error {
+func (b *BinanceSpot) CancelOrder(symbol string, clientOrderID string) error {
 	service := b.client.NewCancelOrderService().
 		Symbol(symbol).
 		OrigClientOrderID(clientOrderID)
@@ -180,52 +176,23 @@ func (b *BinanceFutures) CancelOrder(symbol string, clientOrderID string) error 
 	return nil
 }
 
-func (b *BinanceFutures) ChangeMarginType(symbol, marginType string) error {
-	m := futures.MarginType(bb.SwitchMarginTypeString(
-		marginType,
-		string(futures.MarginTypeCrossed),
-		string(futures.MarginTypeIsolated),
-	))
-
-	err := b.client.NewChangeMarginTypeService().
-		Symbol(symbol).
-		MarginType(m).
-		Do(context.Background())
-
-	if err != nil && err.Error() == "<APIError> code=-4046, msg=No need to change margin type." {
-		return nil
-	}
-
-	return fmt.Errorf("ChangeMarginType: symbol=%s, marginType=%s, err=%w",
-		symbol, marginType, err)
+func (b *BinanceSpot) ChangeMarginType(symbol, marginType string) error {
+	return ErrNotImplemented
 }
 
-func (b *BinanceFutures) ChangeLeverage(symbol string, leverage int) error {
-	resp, err := b.client.NewChangeLeverageService().
-		Symbol(symbol).
-		Leverage(leverage).
-		Do(context.Background())
-	if err != nil {
-		return fmt.Errorf("ChangeLeverage: symbol=%s, leverage=%d, err=%w",
-			symbol, leverage, err)
-	}
-
-	if resp.Leverage != leverage {
-		return ErrLeverageNotSet
-	}
-
-	return nil
+func (b *BinanceSpot) ChangeLeverage(symbol string, leverage int) error {
+	return ErrNotImplemented
 }
 
 // +-----------+
 // | Websocket |
 // +-----------+
 
-func (b *BinanceFutures) Book1(ctx context.Context, symbol string) <-chan commons.Book1 {
+func (b *BinanceSpot) Book1(ctx context.Context, symbol string) <-chan commons.Book1 {
 	return SubscribeBookTicker(ctx, symbol)
 }
 
-func (b *BinanceFutures) Trade(ctx context.Context, symbol string) <-chan commons.Trade {
+func (b *BinanceSpot) Trade(ctx context.Context, symbol string) <-chan commons.Trade {
 	return SubscribeAggTrade(ctx, symbol)
 }
 
@@ -238,7 +205,7 @@ type orderUpdateNode struct {
 	callback      commons.OrderUpdateCallback
 }
 
-func (b *BinanceFutures) OnOrderUpdate(clientOrderID string, callback commons.OrderUpdateCallback) {
+func (b *BinanceSpot) OnOrderUpdate(clientOrderID string, callback commons.OrderUpdateCallback) {
 	node := orderUpdateNode{clientOrderID, callback}
 
 	// Make sure nobody else modifies orderUpdateCallbacks.
@@ -249,14 +216,14 @@ func (b *BinanceFutures) OnOrderUpdate(clientOrderID string, callback commons.Or
 	b.orderUpdateCallbacks.Push(node)
 }
 
-func (b *BinanceFutures) handleEvents() {
+func (b *BinanceSpot) handleEvents() {
 	for pointer := range b.streamer.Events {
-		event, ok := pointer.(*futures.WsUserDataEvent)
+		event, ok := pointer.(*binance.WsUserDataEvent)
 		if !ok {
 			panic("TODO")
 		}
 
-		if event.Event == futures.UserDataEventTypeOrderTradeUpdate {
+		if event.Event == binance.UserDataEventTypeExecutionReport {
 			var (
 				node  orderUpdateNode
 				found = false
@@ -275,7 +242,7 @@ func (b *BinanceFutures) handleEvents() {
 					panic("TODO")
 				}
 
-				if node.clientOrderID == event.OrderTradeUpdate.ClientOrderID {
+				if node.clientOrderID == event.OrderUpdate.ClientOrderId {
 					// We found the proper callback for this order.
 					// It has to be executed outside of the locked
 					// section, so we just mark it as found.
@@ -289,8 +256,8 @@ func (b *BinanceFutures) handleEvents() {
 
 			if found {
 				update := commons.OrderUpdate{
-					ClientOrderID: event.OrderTradeUpdate.ClientOrderID,
-					Status:        string(event.OrderTradeUpdate.Status),
+					ClientOrderID: event.OrderUpdate.ClientOrderId,
+					Status:        string(event.OrderUpdate.Status),
 				}
 				node.callback(update)
 			}

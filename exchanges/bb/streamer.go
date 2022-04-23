@@ -1,8 +1,7 @@
-package binancef
+package bb
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/adshao/go-binance/v2"
@@ -10,14 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/ydm/commons"
 )
-
-func wrap(err error, message string) error {
-	if err != nil {
-		return fmt.Errorf("%s: %w", message, err)
-	}
-
-	return nil
-}
 
 // +-------------------+
 // | BaseStreamService |
@@ -46,13 +37,13 @@ func (s BaseFuturesStreamService) Start(ctx context.Context) (listenKey string, 
 func (s BaseFuturesStreamService) Close(ctx context.Context, listenKey string) error {
 	err := s.Client.NewCloseUserStreamService().ListenKey(listenKey).Do(ctx)
 
-	return wrap(err, "close failed")
+	return Wrap(err, "close failed")
 }
 
 func (s BaseFuturesStreamService) Keepalive(ctx context.Context, listenKey string) error {
 	err := s.Client.NewKeepaliveUserStreamService().ListenKey(listenKey).Do(ctx)
 
-	return wrap(err, "keepalive failed")
+	return Wrap(err, "keepalive failed")
 }
 
 // +-----------------------+
@@ -66,19 +57,19 @@ type BaseSpotStreamService struct {
 func (s BaseSpotStreamService) Start(ctx context.Context) (listenKey string, err error) {
 	listenKey, err = s.client.NewStartUserStreamService().Do(ctx)
 
-	return listenKey, wrap(err, "start stream failed")
+	return listenKey, Wrap(err, "start stream failed")
 }
 
 func (s BaseSpotStreamService) Close(ctx context.Context, listenKey string) error {
 	err := s.client.NewCloseUserStreamService().ListenKey(listenKey).Do(ctx)
 
-	return wrap(err, "close stream failed")
+	return Wrap(err, "close stream failed")
 }
 
 func (s BaseSpotStreamService) Keepalive(ctx context.Context, listenKey string) error {
 	err := s.client.NewKeepaliveUserStreamService().ListenKey(listenKey).Do(ctx)
 
-	return wrap(err, "keepalive failed")
+	return Wrap(err, "keepalive failed")
 }
 
 // +---------------+
@@ -129,7 +120,7 @@ func (s FuturesStreamService) Feed(listenKey string, events chan interface{}) (
 		},
 	)
 
-	err = wrap(err, "serve failed")
+	err = Wrap(err, "serve failed")
 
 	return
 }
@@ -173,7 +164,7 @@ func (s SpotStreamService) Feed(listenKey string, events chan interface{}) (
 		},
 	)
 
-	err = wrap(err, "serve failed")
+	err = Wrap(err, "serve failed")
 
 	return doneC, stopC, err
 }
@@ -217,7 +208,7 @@ func (s *Streamer) loop(ctx context.Context) (err error) {
 		// context, it panics.  And we still want to shut down gracefully.
 		listenKey, err := s.service.Start(context.Background()) //nolint:contextcheck
 		if err != nil {
-			return wrap(err, "service start failed")
+			return Wrap(err, "service start failed")
 		}
 
 		// This is an ugly workaround for a bug (in Binance's API) I'm too lazy to
