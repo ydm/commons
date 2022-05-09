@@ -56,13 +56,11 @@ func SubscribeAggTrade(ctx context.Context, symbol string) <-chan commons.Trade 
 			}
 		},
 		func(err error) {
-			commons.What(log.Warn().Err(err), "WsAggTradeServe invoked error handler")
-			// panic(err)
+			commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe invoked error handler")
 		},
 	)
 	if err != nil {
-		commons.What(log.Warn().Err(err), "WsAggTradeServe failed")
-		// panic(err)
+		commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe failed")
 	}
 
 	go func() {
