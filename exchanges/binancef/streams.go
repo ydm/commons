@@ -32,53 +32,69 @@ type BookTicker struct {
 func SubscribeAggTrade(ctx context.Context, symbol string) <-chan commons.Trade {
 	c := make(chan commons.Trade)
 
-	done, stop, err := futures.WsAggTradeServe(
-		symbol,
-		func(event *futures.WsAggTradeEvent) {
-			if event == nil {
-				commons.What(log.Warn(), "event is nil")
-
-				return
-			}
-
-			var x Trade
-			if err := commons.SmartCopy(&x, event); err != nil {
-				commons.What(log.Warn().Err(err), "SmartCopy(WsAggTradeEvent) failed")
-			}
-
-			c <- commons.Trade{
-				TradeID:      x.LastTradeID,
-				Time:         x.Time,
-				Symbol:       x.Symbol,
-				Price:        x.Price,
-				Quantity:     x.Quantity,
-				BuyerIsMaker: x.Maker,
-			}
-		},
-		func(err error) {
-			commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe invoked error handler")
-		},
-	)
-	if err != nil {
-		commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe failed")
-	}
-
+	// In a parallel goroutine, start a loop that subscribes to WsAggTrade and feeds c.
+	// If an error occurs, start over.
 	go func() {
-		commons.Checker.Push()
-		defer commons.Checker.Pop()
+		// Using this as MT-safe arrays.
+		stops := make(chan chan struct{}, 256)
+		dones := make(chan chan struct{}, 256)
 
-		<-done
-		close(c)
-	}()
+		// Make sure all stops are called and all dones are waited after context.
+		go func() {
+			commons.Checker.Push()
+			defer commons.Checker.Pop()
 
-	go func() {
-		commons.Checker.Push()
-		defer commons.Checker.Pop()
+			<-ctx.Done()
 
-		<-ctx.Done()
-		close(stop)
+			for stop := range stops {
+				close(stop)
+			}
 
-		<-done
+			for done := range dones {
+				<-done
+			}
+		}()
+
+		for ctx.Err() == nil {
+			commons.What(log.Info().Str("symbol", symbol), "subscribing to WsAggTrade")
+
+			done, stop, err := futures.WsAggTradeServe(
+				symbol,
+				func(event *futures.WsAggTradeEvent) {
+					if event == nil {
+						commons.What(log.Warn(), "event is nil")
+
+						return
+					}
+
+					var x Trade
+					if err := commons.SmartCopy(&x, event); err != nil {
+						commons.What(log.Warn().Err(err), "SmartCopy(WsAggTradeEvent) failed")
+					}
+
+					c <- commons.Trade{
+						TradeID:      x.LastTradeID,
+						Time:         x.Time,
+						Symbol:       x.Symbol,
+						Price:        x.Price,
+						Quantity:     x.Quantity,
+						BuyerIsMaker: x.Maker,
+					}
+				},
+				func(err error) {
+					commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe invoked error handler")
+				},
+			)
+
+			if err == nil {
+				dones <- done
+				stops <- stop
+			} else {
+				commons.What(log.Warn().Str("symbol", symbol).Err(err), "WsAggTradeServe failed")
+			}
+
+			<-done
+		}
 	}()
 
 	return c
