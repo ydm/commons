@@ -35,11 +35,15 @@ func SubscribeAggTrade(ctx context.Context, symbol string) <-chan commons.Trade 
 	// In a parallel goroutine, start a loop that subscribes to WsAggTrade and feeds c.
 	// If an error occurs, start over.
 	go func() {
+		commons.Checker.Push()
+		defer commons.Checker.Pop()
+
 		// Using this as MT-safe arrays.
 		stops := make(chan chan struct{}, 256)
 		dones := make(chan chan struct{}, 256)
 
-		// Make sure all stops are called and all dones are waited after context.
+		// Make sure all stops are called and all dones
+		// are waited for after context is finished.
 		go func() {
 			commons.Checker.Push()
 			defer commons.Checker.Pop()
